@@ -10164,6 +10164,10 @@ public:
             wchar_t inst_id[MAX_PATH] = { 0 };
             SetupDiGetDeviceInstanceIdW(handle_dev_info, &dev_info, inst_id, MAX_PATH, nullptr);
             if (wcsstr(inst_id, L"PNP0A06") && (wcsstr(inst_id, L"HOTPLUG") || wcsstr(inst_id, L"GPE0") || wcsstr(inst_id, L"SMI"))) {
+				debug("666 PNP0A06=", std::hex, wcsstr(inst_id, L"PNP0A06"));
+				debug("666 HOTPLUG=", std::hex, wcsstr(inst_id, L"HOTPLUG"));
+				debug("666 GPE0=", std::hex, wcsstr(inst_id, L"GPE0"));
+				debug("666 SMI=", std::hex, wcsstr(inst_id, L"SMI"));
                 debug("ACPI_SIGNATURE: Synthetic QEMU ACPI device detected (PNP0A06)");
                 SetupDiDestroyDeviceInfoList(handle_dev_info);
                 return core::add(brand_enum::QEMU);
