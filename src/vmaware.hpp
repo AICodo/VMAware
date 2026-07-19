@@ -832,7 +832,9 @@ public:
                 // Hypervisor range: 0x40000000 - 0x7FFFFFFF
                 cpu::cpuid(eax, unused, unused, unused, cpu::leaf::hypervisor);
                 debug("CPUID: max hypervisor leaf = 0x", std::hex, eax);
+				debug("CPUID: eax=%x", std::hex, eax);
                 supported = (p_leaf <= eax);
+				debug("supported=%x", std::hex, supported);
             }
             else if (p_leaf < 0xC0000000) {
                 // Extended range: 0x80000000 - 0xBFFFFFFF
