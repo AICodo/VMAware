@@ -832,9 +832,9 @@ public:
                 // Hypervisor range: 0x40000000 - 0x7FFFFFFF
                 cpu::cpuid(eax, unused, unused, unused, cpu::leaf::hypervisor);
                 debug("CPUID: max hypervisor leaf = 0x", std::hex, eax);
-				debug("CPUID: eax=%x", std::hex, eax);
+				debug("666 CPUID: eax=", std::hex, eax);
                 supported = (p_leaf <= eax);
-				debug("supported=%x", std::hex, supported);
+				debug("666 supported=", std::hex, supported);
             }
             else if (p_leaf < 0xC0000000) {
                 // Extended range: 0x80000000 - 0xBFFFFFFF
@@ -11953,6 +11953,7 @@ public:
                     _wcsicmp(s, L"PNP0100") == 0)
                 {
                     found = true;
+					debug("666 system timer found=true");
                     break;
                 }
             }
@@ -12108,7 +12109,7 @@ public:
                     const auto execute_hypercall = reinterpret_cast<void(*)()>(base_address);
                     execute_hypercall();
                     generic_hypervisor = true; // if no exception occurs then a hypervisor handled it, this is default KVM behavior
-                    debug("KVM_INTERCEPTION: Detected a hypervisor intercepting hypercalls");
+                    debug("666 KVM_INTERCEPTION: Detected a hypervisor intercepting hypercalls");
                 }
                 __except (exception_status = GetExceptionCode(), EXCEPTION_EXECUTE_HANDLER) {
                     // if it's #PF instead of #UD then old KVM quirk is present
@@ -12116,6 +12117,7 @@ public:
                         debug("KVM_INTERCEPTION: Detected KVM attempting to patch instructions on the fly");
                         is_kvm_detected = true;
                     }
+					 debug("666 KVM_INTERCEPTION: exception_status");
                 }
             }
 
