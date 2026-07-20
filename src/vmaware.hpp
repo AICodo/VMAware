@@ -11704,6 +11704,8 @@ public:
                 }
                 return false;
             };
+			static int myintel_hits = 0;
+            static int myamd_hits = 0;
 
             auto find_vendor_hex = [](const wchar_t* wptr) noexcept -> u32 {
                 if (!wptr) return 0;
@@ -11814,8 +11816,8 @@ public:
 
             if (intel_hits > amd_hits) return MBVendor::Intel;
             if (amd_hits > intel_hits) return MBVendor::AMD;
-			debug("666 intel_hits=", std::hex, intel_hits);
-			debug("666 amd_hits=", std::hex, amd_hits);
+			myintel_hits=intel_hits;
+            myamd_hits=amd_hits;
             return MBVendor::Unknown;
         };
 
@@ -11824,6 +11826,8 @@ public:
         switch (vendor) {
         case MBVendor::Intel:
             if (claimed_amd && !claimed_intel) {
+				debug("666 intel_hits=", std::hex, myintel_hits);
+				debug("666 amd_hits=", std::hex, myamd_hits);
 				debug("666 claimed_amd=", std::hex, claimed_amd);
 				debug("666 claimed_intel=", std::hex, claimed_intel);
                 debug("CPU_HEURISTIC: CPU reports AMD but chipset looks Intel");
