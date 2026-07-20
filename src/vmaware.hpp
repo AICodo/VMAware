@@ -11824,7 +11824,6 @@ public:
         switch (vendor) {
         case MBVendor::Intel:
             if (claimed_amd && !claimed_intel) {
-				debug("666 vendor=", std::hex, vendor);
 				debug("666 claimed_amd=", std::hex, claimed_amd);
 				debug("666 claimed_intel=", std::hex, claimed_intel);
                 debug("CPU_HEURISTIC: CPU reports AMD but chipset looks Intel");
