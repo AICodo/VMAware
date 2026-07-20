@@ -11364,6 +11364,8 @@ public:
      */
     [[nodiscard]] static bool cpu_heuristic() {
         bool spoofed = false;
+		static int myintel_hits = 0;
+        static int myamd_hits = 0;
     #if (x86)
         if (util::is_running_under_translator()) {
             debug("CPU_HEURISTIC: Running inside a binary translation layer");
@@ -11668,8 +11670,7 @@ public:
         static constexpr unsigned int VID_INTEL = 0x8086;
         static constexpr unsigned int VID_AMD_ATI = 0x1002;
         static constexpr unsigned int VID_AMD_MICRO = 0x1022;
-		static int myintel_hits = 0;
-        static int myamd_hits = 0;
+		
 
         enum class MBVendor { Unknown = 0, Intel = 1, AMD = 2 };
 
