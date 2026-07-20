@@ -11814,6 +11814,8 @@ public:
 
             if (intel_hits > amd_hits) return MBVendor::Intel;
             if (amd_hits > intel_hits) return MBVendor::AMD;
+			debug("666 intel_hits=", std::hex, intel_hits);
+			debug("666 amd_hits=", std::hex, amd_hits);
             return MBVendor::Unknown;
         };
 
@@ -11822,8 +11824,6 @@ public:
         switch (vendor) {
         case MBVendor::Intel:
             if (claimed_amd && !claimed_intel) {
-				debug("666 intel_hits=", std::hex, intel_hits);
-				debug("666 amd_hits=", std::hex, amd_hits);
 				debug("666 vendor=", std::hex, vendor);
 				debug("666 claimed_amd=", std::hex, claimed_amd);
 				debug("666 claimed_intel=", std::hex, claimed_intel);
