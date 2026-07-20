@@ -11668,6 +11668,8 @@ public:
         static constexpr unsigned int VID_INTEL = 0x8086;
         static constexpr unsigned int VID_AMD_ATI = 0x1002;
         static constexpr unsigned int VID_AMD_MICRO = 0x1022;
+		static int myintel_hits = 0;
+        static int myamd_hits = 0;
 
         enum class MBVendor { Unknown = 0, Intel = 1, AMD = 2 };
 
@@ -11704,8 +11706,7 @@ public:
                 }
                 return false;
             };
-			static int myintel_hits = 0;
-            static int myamd_hits = 0;
+			
 
             auto find_vendor_hex = [](const wchar_t* wptr) noexcept -> u32 {
                 if (!wptr) return 0;
