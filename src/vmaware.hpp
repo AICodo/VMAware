@@ -11815,11 +11815,10 @@ public:
             if (intel_hits == 0 && amd_hits == 0) {
                 scan_devices(nullptr, DIGCF_ALLCLASSES | DIGCF_PRESENT);
             }
-
+			std::cout << "666 [INfO] intel_hits=" << (int)intel_hits << "\n";
+			std::cout << "666 [INfO] amd_hits=" << (int)amd_hits << "\n";
             if (intel_hits > amd_hits) return MBVendor::Intel;
             if (amd_hits > intel_hits) return MBVendor::AMD;
-		 	std::cout << "[INfO] intel_hits=" << intel_hits << "\n";
-			std::cout << "[INfO] amd_hits=" << amd_hits << "\n";
             return MBVendor::Unknown;
         };
 
