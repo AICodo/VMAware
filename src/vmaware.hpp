@@ -9,10 +9,10 @@
  *  C++ VM detection library
  *
  *  - Developed by: Requiem (https://github.com/NotRequiem)
- *  - Former developer and creator: kernelwernel (https://github.com/kernelwernel)
+ *  - Former developer and creator: kernelwernel (https://github.com/kernelƒwernel)
  *  - Contributed by:
  *      - Alex (https://github.com/greenozon)
- *      - Marek Knápek (https://github.com/MarekKnapek)
+ *      - Marek Knápek (https://github.com/MarekKnapek)ƒ
  *      - Vladyslav Miachkov (https://github.com/fameowner99)
  *      - Alan Tse (https://github.com/alandtse)
  *      - Georgii Gennadev (https://github.com/D00Movenok)
@@ -11822,6 +11822,11 @@ public:
         switch (vendor) {
         case MBVendor::Intel:
             if (claimed_amd && !claimed_intel) {
+				debug("666 intel_hits=", std::hex, intel_hits);
+				debug("666 amd_hits=", std::hex, amd_hits);
+				debug("666 vendor=", std::hex, vendor);
+				debug("666 claimed_amd=", std::hex, claimed_amd);
+				debug("666 claimed_intel=", std::hex, claimed_intel);
                 debug("CPU_HEURISTIC: CPU reports AMD but chipset looks Intel");
                 spoofed = true;
             }
