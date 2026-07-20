@@ -16,7 +16,7 @@
  *      - Vladyslav Miachkov (https://github.com/fameowner99)
  *      - Alan Tse (https://github.com/alandtse)
  *      - Georgii Gennadev (https://github.com/D00Movenok)
- *      - utoshu (https://github.com/utoshu)
+ *      - utoshu (https://github.com/utoshu)ƒ
  *      - Jyd (https://github.com/jyd519)
  *      - dmfrpro (https://github.com/dmfrpro)
  *      - Pierre-Étienne Messier (https://github.com/pemessier)
@@ -11815,10 +11815,16 @@ public:
             if (intel_hits == 0 && amd_hits == 0) {
                 scan_devices(nullptr, DIGCF_ALLCLASSES | DIGCF_PRESENT);
             }
-			std::cout << "666 [INfO] intel_hits=" << (int)intel_hits << "\n";
-			std::cout << "666 [INfO] amd_hits=" << (int)amd_hits << "\n";
-            if (intel_hits > amd_hits) return MBVendor::Intel;
-            if (amd_hits > intel_hits) return MBVendor::AMD;
+			std::cout << "[DEBUG] intel_hits=" << (int)intel_hits << "\n";
+			std::cout << "[DEBUG] amd_hits=" << (int)amd_hits << "\n";
+            if (intel_hits > amd_hits){
+				std::cout << "[DEBUG] return MBVendor::Intel" << "\n";
+				return MBVendor::Intel;
+			}
+            if (amd_hits > intel_hits){ 
+				std::cout << "[DEBUG] return MBVendor::AMD" << "\n";
+				return MBVendor::AMD;
+			}
             return MBVendor::Unknown;
         };
 
