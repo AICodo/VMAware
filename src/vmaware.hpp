@@ -11791,11 +11791,11 @@ public:
                         if (w_hardware_id) {
                             const u32 vid = find_vendor_hex(w_hardware_id);
                             if (vid == VID_INTEL){
-								std::cout << "[DEBUG] intel_hits++ =" << w_hardware_id << "\n";
+								std::cout << "[DEBUG] intel_hits++=" <<(int) intel_hits << "\n";
 								intel_hits++;
 							}
                             else if (vid == VID_AMD_ATI || vid == VID_AMD_MICRO){
-								std::cout << "[DEBUG] amd_hits++ =" << w_hardware_id << "\n";
+								std::cout << "[DEBUG] amd_hits++" <<(int) amd_hits <<"\n";
 								amd_hits++;
 							}
                         }
