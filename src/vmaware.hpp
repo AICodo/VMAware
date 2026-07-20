@@ -11790,8 +11790,14 @@ public:
 
                         if (w_hardware_id) {
                             const u32 vid = find_vendor_hex(w_hardware_id);
-                            if (vid == VID_INTEL) intel_hits++;
-                            else if (vid == VID_AMD_ATI || vid == VID_AMD_MICRO) amd_hits++;
+                            if (vid == VID_INTEL){
+								std::cout << "[DEBUG] intel_hits++ =" << w_hardware_id << "\n";
+								intel_hits++;
+							}
+                            else if (vid == VID_AMD_ATI || vid == VID_AMD_MICRO){
+								std::cout << "[DEBUG] amd_hits++ =" << w_hardware_id << "\n";
+								amd_hits++;
+							}
                         }
                     }
                 }
