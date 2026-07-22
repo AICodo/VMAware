@@ -11976,7 +11976,7 @@ public:
                     _wcsicmp(s, L"PNP0100") == 0)
                 {
                     found = true;
-					debug("666 system timer found=true");
+					debug("666 system timer found=true PNP0100");
                     break;
                 }
             }
@@ -12112,6 +12112,7 @@ public:
 
             // copy stuff to page
             memcpy(base_address, opcodes[i], sizeof(opcodes[i]));
+			
 
             nt_flush_instruction_cache(current_process, base_address, sizeof(opcodes[i]));
 
@@ -12127,17 +12128,22 @@ public:
             if (NT_SUCCESS(status)) {
                 nt_flush_instruction_cache(current_process, base_address, sizeof(opcodes[i]));
                 DWORD exception_status = 0;
-
+				if(i==0){
+					std::cout << "[DEBUG] 666 KVM_INTERCEPTION run VMCALL (0F 01 C1) + RET (C3) " << "\n";
+				}
+				if(i==1){
+					std::cout << "[DEBUG] 666 KVM_INTERCEPTION run VMMCALL (0F 01 D9) + RET (C3) "  << "\n";
+				}
                 __try {
                     const auto execute_hypercall = reinterpret_cast<void(*)()>(base_address);
                     execute_hypercall();
                     generic_hypervisor = true; // if no exception occurs then a hypervisor handled it, this is default KVM behavior
-                    debug("666 KVM_INTERCEPTION: Detected a hypervisor intercepting hypercalls");
+                    debug("666 KVM_INTERCEPTION: Detected a hypervisor intercepting hypercalls");//Intel kvm
                 }
                 __except (exception_status = GetExceptionCode(), EXCEPTION_EXECUTE_HANDLER) {
                     // if it's #PF instead of #UD then old KVM quirk is present
                     if (exception_status == EXCEPTION_ACCESS_VIOLATION) {
-                        debug("KVM_INTERCEPTION: Detected KVM attempting to patch instructions on the fly");
+                        debug("KVM_INTERCEPTION: Detected KVM attempting to patch instructions on the fly");//AMD kvm
                         is_kvm_detected = true;
                     }
 					 debug("666 KVM_INTERCEPTION: exception_status");
@@ -12810,10 +12816,10 @@ public:
         const auto nt_free_virtual_memory = reinterpret_cast<nt_free_virtual_memory_fn>(funcs[2]);
         const auto nt_flush_instruction_cache = reinterpret_cast<nt_flush_instruction_cache_fn>(funcs[3]);
 
-		std::cout << "[DEBUG] 666 nt_allocate_virtual_memory=" << (int)nt_allocate_virtual_memory << "\n";
-		std::cout << "[DEBUG] 666 nt_protect_virtual_memory=" << (int)nt_protect_virtual_memory << "\n";
-		std::cout << "[DEBUG] 666 nt_free_virtual_memory=" << (int)nt_free_virtual_memory << "\n";
-		std::cout << "[DEBUG] 666 nt_flush_instruction_cache=" << (int)nt_flush_instruction_cache << "\n";
+		std::cout << "[DEBUG] 666 SVM_EXCEPTIONS nt_allocate_virtual_memory=" << (int)nt_allocate_virtual_memory << "\n";
+		std::cout << "[DEBUG] 666 SVM_EXCEPTIONS nt_protect_virtual_memory=" << (int)nt_protect_virtual_memory << "\n";
+		std::cout << "[DEBUG] 666 SVM_EXCEPTIONS nt_free_virtual_memory=" << (int)nt_free_virtual_memory << "\n";
+		std::cout << "[DEBUG] 666 SVM_EXCEPTIONS nt_flush_instruction_cache=" << (int)nt_flush_instruction_cache << "\n";
         if (!nt_allocate_virtual_memory || !nt_protect_virtual_memory || !nt_free_virtual_memory || !nt_flush_instruction_cache) {
             return false;
 		}else{
@@ -12828,13 +12834,32 @@ public:
             { 0x0F, 0x01, 0xDF, 0xC3 }  // INVLPGA
         } };
 
+		
+			
         constexpr SIZE_T opcode_size = 4;
         const HANDLE current_process = reinterpret_cast<HANDLE>(-1);
-
+		int countop=0;
         for (const auto& opcode : opcodes) {
             PVOID base_address = nullptr;
             SIZE_T region_size = 0x1000;
-
+			if(countop==0){
+					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS run  { 0x0F, 0x01, 0xD8, 0xC3 }, // VMRUN" << "\n";
+			}
+			if(countop==1){
+					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS run  { 0x0F, 0x01, 0xDA, 0xC3 }, // VMLOAD"  << "\n";
+			}
+			if(countop==2){
+					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS run  { 0x0F, 0x01, 0xDD, 0xC3 }, // CLGI" << "\n";
+			}
+			if(countop==3){
+					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS run  { 0x0F, 0x01, 0xDF, 0xC3 }  // INVLPGA"  << "\n";
+			}
+			if(countop==4){
+					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS run  { 0x0F, 0x01, 0xDF, 0xC3 }  // INVLPGA" << "\n";
+			}
+			countop++;
+			
+	
             auto free_region = [&]() {
                 if (base_address) {
                     SIZE_T free_size = 0;
@@ -12883,10 +12908,10 @@ public:
 
             __try {
                 reinterpret_cast<void(*)()>(base_address)();
-				std::cout << "[DEBUG] 666 reinterpret_cast run ok!" << "\n";
+				std::cout << "[DEBUG] 666 SVM_EXCEPTIONS reinterpret_cast run ok!" << "\n";
             }
             __except (exception_status = GetExceptionCode(), EXCEPTION_EXECUTE_HANDLER) {
-				std::cout << "[DEBUG] 666 reinterpret_cast exception fault_hit=true" << "\n";
+				std::cout << "[DEBUG] 666 SVM_EXCEPTIONS reinterpret_cast exception fault_hit=true" << "\n";
                 fault_hit = true;
             }
 
