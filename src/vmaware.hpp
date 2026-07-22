@@ -12130,7 +12130,7 @@ public:
                 DWORD exception_status = 0;
                 __try {
 					if(i==0){
-						std::cout << "[DEBUG] 666 KVM_INTERCEPTION 0 run VMCALL (0F 01 C1) + RET (C3) " << "\n";
+						std::cout << "[DEBUG] 666 KVM_INTERCEPTION 0 run VMCALL  (0F 01 C1) + RET (C3) " << "\n";
 					}
 					if(i==1){
 						std::cout << "[DEBUG] 666 KVM_INTERCEPTION 1 run VMMCALL (0F 01 D9) + RET (C3) "  << "\n";
@@ -12908,10 +12908,10 @@ public:
 
             __try {
                 reinterpret_cast<void(*)()>(base_address)();
-				std::cout << "[DEBUG] 666 SVM_EXCEPTIONS reinterpret_cast run ok!" << "\n";
+				std::cout << "[DEBUG] 666 SVM_EXCEPTIONS reinterpret_cast run ok! countop="<< (int)countop << "\n";
             }
             __except (exception_status = GetExceptionCode(), EXCEPTION_EXECUTE_HANDLER) {
-				std::cout << "[DEBUG] 666 SVM_EXCEPTIONS reinterpret_cast exception fault_hit=true" << "\n";
+				std::cout << "[DEBUG] 666 SVM_EXCEPTIONS reinterpret_cast exception fault_hit=true countop="<< (int)countop << "\n";
                 fault_hit = true;
             }
 
