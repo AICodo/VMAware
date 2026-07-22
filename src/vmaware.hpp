@@ -12849,10 +12849,10 @@ public:
 					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 1 run  { 0x0F, 0x01, 0xDA, 0xC3 }, // VMLOAD"  << "\n";
 			}
 			if(countop==2){
-					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 2 run  { 0x0F, 0x01, 0xDD, 0xC3 }, // CLGI" << "\n";
+					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 2 run  { 0x0F, 0x01, 0xDB, 0xC3 }, // VMSAVE" << "\n";
 			}
 			if(countop==3){
-					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 3 run  { 0x0F, 0x01, 0xDF, 0xC3 }  // INVLPGA"  << "\n";
+					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 3 run  { 0x0F, 0x01, 0xDD, 0xC3 }, // CLGI"  << "\n";
 			}
 			if(countop==4){
 					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 4 run  { 0x0F, 0x01, 0xDF, 0xC3 }  // INVLPGA" << "\n";
@@ -12908,12 +12908,13 @@ public:
 
             __try {
                 reinterpret_cast<void(*)()>(base_address)();
-				std::cout << "[DEBUG] 666 SVM_EXCEPTIONS reinterpret_cast run ok! countop="<< (int)countop << "\n";
+				std::cout << "[DEBUG] 666 SVM_EXCEPTIONS reinterpret_cast run ok! countop="<< (int)(countop-1) << "\n";
             }
             __except (exception_status = GetExceptionCode(), EXCEPTION_EXECUTE_HANDLER) {
-				std::cout << "[DEBUG] 666 SVM_EXCEPTIONS reinterpret_cast exception fault_hit=true countop="<< (int)countop << "\n";
+				std::cout << "[DEBUG] 666 SVM_EXCEPTIONS reinterpret_cast exception fault_hit=true countop="<< (int)(countop-1) << "\n";
                 fault_hit = true;
             }
+			std::cout << "[DEBUG] 666 exception_status="<< (int)(exception_status) <<", countop="<< (int)(countop-1) <<", fault_hit="<<(int)fault_hit<< "\n";
 
             free_region();
 
@@ -12923,7 +12924,7 @@ public:
             }
 
             if (exception_status == EXCEPTION_ILLEGAL_INSTRUCTION) {
-				std::cout << "[DEBUG] 666 SVM_EXCEPTIONS exception_status==EXCEPTION_ILLEGAL_INSTRUCTION continue, countop="<< (int)(countop-1) << "\n";
+				std::cout << "[DEBUG] 666 SVM_EXCEPTIONS exception_status==EXCEPTION_ILLEGAL_INSTRUCTION continue, countop="<< (int)(countop-1) <<"EXCEPTION_ILLEGAL_INSTRUCTION=" << (int)EXCEPTION_ILLEGAL_INSTRUCTION << "\n";
                 continue;
             }
 
