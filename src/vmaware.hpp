@@ -12128,13 +12128,13 @@ public:
             if (NT_SUCCESS(status)) {
                 nt_flush_instruction_cache(current_process, base_address, sizeof(opcodes[i]));
                 DWORD exception_status = 0;
-				if(i==0){
-					std::cout << "[DEBUG] 666 KVM_INTERCEPTION run VMCALL (0F 01 C1) + RET (C3) " << "\n";
-				}
-				if(i==1){
-					std::cout << "[DEBUG] 666 KVM_INTERCEPTION run VMMCALL (0F 01 D9) + RET (C3) "  << "\n";
-				}
                 __try {
+					if(i==0){
+						std::cout << "[DEBUG] 666 KVM_INTERCEPTION 0 run VMCALL (0F 01 C1) + RET (C3) " << "\n";
+					}
+					if(i==1){
+						std::cout << "[DEBUG] 666 KVM_INTERCEPTION 1 run VMMCALL (0F 01 D9) + RET (C3) "  << "\n";
+					}
                     const auto execute_hypercall = reinterpret_cast<void(*)()>(base_address);
                     execute_hypercall();
                     generic_hypervisor = true; // if no exception occurs then a hypervisor handled it, this is default KVM behavior
@@ -12816,10 +12816,10 @@ public:
         const auto nt_free_virtual_memory = reinterpret_cast<nt_free_virtual_memory_fn>(funcs[2]);
         const auto nt_flush_instruction_cache = reinterpret_cast<nt_flush_instruction_cache_fn>(funcs[3]);
 
-		std::cout << "[DEBUG] 666 SVM_EXCEPTIONS nt_allocate_virtual_memory=" << (int)nt_allocate_virtual_memory << "\n";
-		std::cout << "[DEBUG] 666 SVM_EXCEPTIONS nt_protect_virtual_memory=" << (int)nt_protect_virtual_memory << "\n";
-		std::cout << "[DEBUG] 666 SVM_EXCEPTIONS nt_free_virtual_memory=" << (int)nt_free_virtual_memory << "\n";
-		std::cout << "[DEBUG] 666 SVM_EXCEPTIONS nt_flush_instruction_cache=" << (int)nt_flush_instruction_cache << "\n";
+		std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 0 nt_allocate_virtual_memory=" << (int)nt_allocate_virtual_memory << "\n";
+		std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 1 nt_protect_virtual_memory=" << (int)nt_protect_virtual_memory << "\n";
+		std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 2 nt_free_virtual_memory=" << (int)nt_free_virtual_memory << "\n";
+		std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 3 nt_flush_instruction_cache=" << (int)nt_flush_instruction_cache << "\n";
         if (!nt_allocate_virtual_memory || !nt_protect_virtual_memory || !nt_free_virtual_memory || !nt_flush_instruction_cache) {
             return false;
 		}else{
@@ -12843,19 +12843,19 @@ public:
             PVOID base_address = nullptr;
             SIZE_T region_size = 0x1000;
 			if(countop==0){
-					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS run  { 0x0F, 0x01, 0xD8, 0xC3 }, // VMRUN" << "\n";
+					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 0 run  { 0x0F, 0x01, 0xD8, 0xC3 }, // VMRUN" << "\n";
 			}
 			if(countop==1){
-					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS run  { 0x0F, 0x01, 0xDA, 0xC3 }, // VMLOAD"  << "\n";
+					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 1 run  { 0x0F, 0x01, 0xDA, 0xC3 }, // VMLOAD"  << "\n";
 			}
 			if(countop==2){
-					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS run  { 0x0F, 0x01, 0xDD, 0xC3 }, // CLGI" << "\n";
+					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 2 run  { 0x0F, 0x01, 0xDD, 0xC3 }, // CLGI" << "\n";
 			}
 			if(countop==3){
-					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS run  { 0x0F, 0x01, 0xDF, 0xC3 }  // INVLPGA"  << "\n";
+					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 3 run  { 0x0F, 0x01, 0xDF, 0xC3 }  // INVLPGA"  << "\n";
 			}
 			if(countop==4){
-					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS run  { 0x0F, 0x01, 0xDF, 0xC3 }  // INVLPGA" << "\n";
+					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 4 run  { 0x0F, 0x01, 0xDF, 0xC3 }  // INVLPGA" << "\n";
 			}
 			countop++;
 			
