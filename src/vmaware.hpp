@@ -11821,14 +11821,14 @@ public:
             if (intel_hits == 0 && amd_hits == 0) {
                 scan_devices(nullptr, DIGCF_ALLCLASSES | DIGCF_PRESENT);
             }
-			std::cout << "[DEBUG] intel_hits=" << (int)intel_hits << "\n";
-			std::cout << "[DEBUG] amd_hits=" << (int)amd_hits << "\n";
+			std::cout << "[DEBUG] 666 intel_hits=" << (int)intel_hits << "\n";
+			std::cout << "[DEBUG] 666 amd_hits=" << (int)amd_hits << "\n";
             if (intel_hits > amd_hits){
-				std::cout << "[DEBUG] return MBVendor::Intel" << "\n";
+				std::cout << "[DEBUG] 666 return MBVendor::Intel" << "\n";
 				return MBVendor::Intel;
 			}
             if (amd_hits > intel_hits){ 
-				std::cout << "[DEBUG] return MBVendor::AMD" << "\n";
+				std::cout << "[DEBUG] 666 return MBVendor::AMD" << "\n";
 				return MBVendor::AMD;
 			}
             return MBVendor::Unknown;
@@ -12810,9 +12810,15 @@ public:
         const auto nt_free_virtual_memory = reinterpret_cast<nt_free_virtual_memory_fn>(funcs[2]);
         const auto nt_flush_instruction_cache = reinterpret_cast<nt_flush_instruction_cache_fn>(funcs[3]);
 
+		std::cout << "[DEBUG] 666 nt_allocate_virtual_memory=" << (int)nt_allocate_virtual_memory << "\n";
+		std::cout << "[DEBUG] 666 nt_protect_virtual_memory=" << (int)nt_protect_virtual_memory << "\n";
+		std::cout << "[DEBUG] 666 nt_free_virtual_memory=" << (int)nt_free_virtual_memory << "\n";
+		std::cout << "[DEBUG] 666 nt_flush_instruction_cache=" << (int)nt_flush_instruction_cache << "\n";
         if (!nt_allocate_virtual_memory || !nt_protect_virtual_memory || !nt_free_virtual_memory || !nt_flush_instruction_cache) {
             return false;
-        }
+		}else{
+			std::cout << "[DEBUG] 666 4 up function return not false=" << "\n";
+		}
 
         constexpr std::array<std::array<u8, 4>, 5> opcodes{ {
             { 0x0F, 0x01, 0xD8, 0xC3 }, // VMRUN
@@ -12879,6 +12885,7 @@ public:
                 reinterpret_cast<void(*)()>(base_address)();
             }
             __except (exception_status = GetExceptionCode(), EXCEPTION_EXECUTE_HANDLER) {
+				std::cout << "[DEBUG] 666 reinterpret_cast exception fault_hit=true" << "\n";
                 fault_hit = true;
             }
 
