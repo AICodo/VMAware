@@ -12817,7 +12817,7 @@ public:
         if (!nt_allocate_virtual_memory || !nt_protect_virtual_memory || !nt_free_virtual_memory || !nt_flush_instruction_cache) {
             return false;
 		}else{
-			std::cout << "[DEBUG] 666 4 up function return not false=" << "\n";
+			std::cout << "[DEBUG] 666 4 up function return not false" << "\n";
 		}
 
         constexpr std::array<std::array<u8, 4>, 5> opcodes{ {
@@ -12883,6 +12883,7 @@ public:
 
             __try {
                 reinterpret_cast<void(*)()>(base_address)();
+				std::cout << "[DEBUG] 666 reinterpret_cast run ok!" << "\n";
             }
             __except (exception_status = GetExceptionCode(), EXCEPTION_EXECUTE_HANDLER) {
 				std::cout << "[DEBUG] 666 reinterpret_cast exception fault_hit=true" << "\n";
@@ -12903,7 +12904,7 @@ public:
                 debug("SVM_EXCEPTIONS: Detected SVM hypervisor hiding CPU capabilities");
                 return core::add(brand_enum::NULL_BRAND, 150);
             }
-
+			std::cout << "[DEBUG] 666 SVM_EXCEPTIONS last return true" << "\n";
             return true;
         }
     #endif
