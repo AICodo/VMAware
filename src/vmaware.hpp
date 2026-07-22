@@ -12857,7 +12857,7 @@ public:
 			if(countop==4){
 					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 4 run  { 0x0F, 0x01, 0xDF, 0xC3 }  // INVLPGA" << "\n";
 			}
-			
+			countop++;
 			
 	
             auto free_region = [&]() {
@@ -12918,12 +12918,12 @@ public:
             free_region();
 
             if (!fault_hit) {
-				std::cout << "[DEBUG] 666 SVM_EXCEPTIONS !fault_hit continue, countop="<< (int)countop << "\n";
+				std::cout << "[DEBUG] 666 SVM_EXCEPTIONS !fault_hit continue, countop="<< (int)(countop-1) << "\n";
                 continue;
             }
 
             if (exception_status == EXCEPTION_ILLEGAL_INSTRUCTION) {
-				std::cout << "[DEBUG] 666 SVM_EXCEPTIONS exception_status==EXCEPTION_ILLEGAL_INSTRUCTION continue, countop="<< (int)countop << "\n";
+				std::cout << "[DEBUG] 666 SVM_EXCEPTIONS exception_status==EXCEPTION_ILLEGAL_INSTRUCTION continue, countop="<< (int)(countop-1) << "\n";
                 continue;
             }
 
@@ -12932,7 +12932,6 @@ public:
                 return core::add(brand_enum::NULL_BRAND, 150);
             }
 			std::cout << "[DEBUG] 666 SVM_EXCEPTIONS last return true" << "\n";
-			countop++;
             return true;
         }
     #endif
