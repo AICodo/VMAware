@@ -9052,7 +9052,13 @@ public:
 
         const bool is_vm_pattern = !(s0_supported || s3_supported || s4_supported || hiber_file_present) &&
             (s1_supported || s2_supported);
-
+		std::cout << "[DEBUG] 666 POWER_CAPABILITIES: s0_supported=" << (int)s0_supported << "\n";
+		std::cout << "[DEBUG] 666 POWER_CAPABILITIES: s1_supported=" << (int)s1_supported << "\n";
+		std::cout << "[DEBUG] 666 POWER_CAPABILITIES: s2_supported=" << (int)s2_supported << "\n";
+		std::cout << "[DEBUG] 666 POWER_CAPABILITIES: s3_supported=" << (int)s3_supported << "\n";
+		std::cout << "[DEBUG] 666 POWER_CAPABILITIES: s4_supported=" << (int)s4_supported << "\n";
+		std::cout << "[DEBUG] 666 POWER_CAPABILITIES: hiber_file_present=" << (int)hiber_file_present << "\n";
+		
         if (is_vm_pattern) {
             debug("POWER_CAPABILITIES: Detected !(S0||S3||S4||HiberFilePresent) + S1|S2 pattern");
             return true;
