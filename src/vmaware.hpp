@@ -12,7 +12,7 @@
  *  - Former developer and creator: kernelwernel (https://github.com/kernelƒwernel)
  *  - Contributed by:
  *      - Alex (https://github.com/greenozon)
- *      - Marek Knápek (https://github.com/MarekKnapek)ƒ
+ *      - Marek Knápek (https://github.com/MarekKnapek)
  *      - Vladyslav Miachkov (https://github.com/fameowner99)
  *      - Alan Tse (https://github.com/alandtse)
  *      - Georgii Gennadev (https://github.com/D00Movenok)
@@ -12096,7 +12096,7 @@ public:
 
         // VMCALL (0F 01 C1) + RET (C3) and VMMCALL (0F 01 D9) + RET (C3)
         constexpr BYTE opcodes[2][4] = {
-           // { 0x0F, 0x01, 0xC1, 0xC3 },
+            { 0x0F, 0x01, 0xC1, 0xC3 },
             { 0x0F, 0x01, 0xD9, 0xC3 }
         };
 
@@ -12152,7 +12152,7 @@ public:
                         debug("KVM_INTERCEPTION: Detected KVM attempting to patch instructions on the fly");//AMD kvm
                         is_kvm_detected = true;
                     }
-					 debug("666 KVM_INTERCEPTION: exception_status");
+					 debug("666 KVM_INTERCEPTION: exception_status=",std::hex, exception_status);
                 }
             }
 
