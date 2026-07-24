@@ -12096,7 +12096,7 @@ public:
 
         // VMCALL (0F 01 C1) + RET (C3) and VMMCALL (0F 01 D9) + RET (C3)
         constexpr BYTE opcodes[2][4] = {
-            { 0x0F, 0x01, 0xC1, 0xC3 },
+           // { 0x0F, 0x01, 0xC1, 0xC3 },
             { 0x0F, 0x01, 0xD9, 0xC3 }
         };
 
@@ -12833,7 +12833,7 @@ public:
 		}
 
         constexpr std::array<std::array<u8, 4>, 5> opcodes{ {
-            //{ 0x0F, 0x01, 0xD8, 0xC3 }, // VMRUN
+            { 0x0F, 0x01, 0xD8, 0xC3 }, // VMRUN
             { 0x0F, 0x01, 0xDA, 0xC3 }, // VMLOAD
             { 0x0F, 0x01, 0xDB, 0xC3 }, // VMSAVE
             { 0x0F, 0x01, 0xDD, 0xC3 }, // CLGI
