@@ -5867,6 +5867,7 @@ public:
             const bool has_intel_ssbd = (l7_edx & (1 << 31)) != 0;
 
             if (has_intel_ibrs || has_intel_stibp || has_intel_ssbd) {
+				std::cout << "[DEBUG] 666 CPUID_SIGNATURE: amd cpu has intel flag=true,1.has_intel_ibrs=" << (int)has_intel_ibrs<<",2.has_intel_stibp=" << (int)has_intel_stibp<<",3.has_intel_ssbd=" << (int)has_intel_ssbd << "\n";
                 return true;
             }
         }
