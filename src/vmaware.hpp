@@ -12097,7 +12097,7 @@ public:
 
         // VMCALL (0F 01 C1) + RET (C3) and VMMCALL (0F 01 D9) + RET (C3)
         constexpr BYTE opcodes[2][4] = {
-            { 0x0F, 0x01, 0xC1, 0xC3 },
+           // { 0x0F, 0x01, 0xC1, 0xC3 },
             { 0x0F, 0x01, 0xD9, 0xC3 }
         };
 
