@@ -12097,7 +12097,7 @@ public:
 
         // VMCALL (0F 01 C1) + RET (C3) and VMMCALL (0F 01 D9) + RET (C3)
         constexpr BYTE opcodes[2][4] = {
-           // { 0x0F, 0x01, 0xC1, 0xC3 },
+            { 0x0F, 0x01, 0xC1, 0xC3 },
             { 0x0F, 0x01, 0xD9, 0xC3 }
         };
 
@@ -12150,7 +12150,7 @@ public:
                 __except (exception_status = GetExceptionCode(), EXCEPTION_EXECUTE_HANDLER) {
                     // if it's #PF instead of #UD then old KVM quirk is present
                     if (exception_status == EXCEPTION_ACCESS_VIOLATION) {
-                        debug("KVM_INTERCEPTION: Detected KVM attempting to patch instructions on the fly");//AMD kvm
+                        debug("KVM_INTERCEPTION: Detected KVM attempting to patch instructions on the fly EXCEPTION_ACCESS_VIOLATION");//AMD kvm
                         is_kvm_detected = true;
                     }
 					 debug("666 KVM_INTERCEPTION: exception_status=",std::hex, exception_status);
