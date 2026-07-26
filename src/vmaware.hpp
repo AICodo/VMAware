@@ -491,7 +491,7 @@ public:
         HYPERVISOR_HOOK,
         SINGLE_STEP,
         EIP_OVERFLOW,
-        SVM_EXCEPTIONS,
+        //SVM_EXCEPTIONS,
         HYPERV_NESTED,
         MEASURED_BOOT,
         TPM_PASSTHROUGH, 
