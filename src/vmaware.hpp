@@ -14440,7 +14440,7 @@ public:
             case HYPERVISOR_HOOK: return "HYPERVISOR_HOOK";
             case SINGLE_STEP: return "SINGLE_STEP";
             case EIP_OVERFLOW: return "EIP_OVERFLOW";
-            //case SVM_EXCEPTIONS: return "SVM_EXCEPTIONS";
+            case SVM_EXCEPTIONS: return "SVM_EXCEPTIONS";
             case CGROUP: return "CGROUP";
             case HYPERV_NESTED: return "HYPERV_NESTED";
             case MEASURED_BOOT: return "MEASURED_BOOT";
@@ -14817,7 +14817,7 @@ public:
             }
 
             // rule 5: if CPU-based techniques detect a hypervisor, the hypervisor bit must be enabled
-            if ((check_technique(VM::TRAP) || check_technique(VM::KVM_INTERCEPTION) || check_technique(VM::SVM_EXCEPTIONS)
+            if ((check_technique(VM::TRAP) || check_technique(VM::KVM_INTERCEPTION) || //check_technique(VM::SVM_EXCEPTIONS)
                 || check_technique(VM::INTERRUPT_SHADOW) || check_technique(VM::EIP_OVERFLOW) || check_technique(VM::SINGLE_STEP)
                 || check_technique(VM::MSR) || check_technique(VM::UD) || check_technique(VM::HYPERV_NESTED)
                 ) && !hv_present) {
