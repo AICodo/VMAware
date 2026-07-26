@@ -491,7 +491,7 @@ public:
         HYPERVISOR_HOOK,
         SINGLE_STEP,
         EIP_OVERFLOW,
-        //SVM_EXCEPTIONS,
+        SVM_EXCEPTIONS,
         HYPERV_NESTED,
         MEASURED_BOOT,
         TPM_PASSTHROUGH, 
@@ -14440,7 +14440,7 @@ public:
             case HYPERVISOR_HOOK: return "HYPERVISOR_HOOK";
             case SINGLE_STEP: return "SINGLE_STEP";
             case EIP_OVERFLOW: return "EIP_OVERFLOW";
-            case SVM_EXCEPTIONS: return "SVM_EXCEPTIONS";
+            //case SVM_EXCEPTIONS: return "SVM_EXCEPTIONS";
             case CGROUP: return "CGROUP";
             case HYPERV_NESTED: return "HYPERV_NESTED";
             case MEASURED_BOOT: return "MEASURED_BOOT";
