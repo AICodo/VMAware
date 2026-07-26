@@ -14967,7 +14967,7 @@ std::array<VM::core::technique, VM::enum_size + 1> VM::core::technique_table = [
         #if (WINDOWS)
             {VM::TRAP, {100, VM::trap}},
             {VM::KVM_INTERCEPTION, {150, VM::kvm_interception}},
-           // {VM::SVM_EXCEPTIONS, {150, VM::svm_exceptions}},
+            {VM::SVM_EXCEPTIONS, {150, VM::svm_exceptions}},
             {VM::MEASURED_BOOT, {100, VM::measured_boot}},
             {VM::INTERRUPT_SHADOW, {100, VM::interrupt_shadow}},
             {VM::EIP_OVERFLOW, {100, VM::eip_overflow}},
