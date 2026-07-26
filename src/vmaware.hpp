@@ -14817,7 +14817,7 @@ public:
             }
 
             // rule 5: if CPU-based techniques detect a hypervisor, the hypervisor bit must be enabled
-            if ((check_technique(VM::TRAP) || check_technique(VM::KVM_INTERCEPTION) || //check_technique(VM::SVM_EXCEPTIONS)
+            if ((check_technique(VM::TRAP) || check_technique(VM::KVM_INTERCEPTION) || check_technique(VM::SVM_EXCEPTIONS)
                 || check_technique(VM::INTERRUPT_SHADOW) || check_technique(VM::EIP_OVERFLOW) || check_technique(VM::SINGLE_STEP)
                 || check_technique(VM::MSR) || check_technique(VM::UD) || check_technique(VM::HYPERV_NESTED)
                 ) && !hv_present) {
@@ -14967,7 +14967,7 @@ std::array<VM::core::technique, VM::enum_size + 1> VM::core::technique_table = [
         #if (WINDOWS)
             {VM::TRAP, {100, VM::trap}},
             {VM::KVM_INTERCEPTION, {150, VM::kvm_interception}},
-            {VM::SVM_EXCEPTIONS, {150, VM::svm_exceptions}},
+           // {VM::SVM_EXCEPTIONS, {150, VM::svm_exceptions}},
             {VM::MEASURED_BOOT, {100, VM::measured_boot}},
             {VM::INTERRUPT_SHADOW, {100, VM::interrupt_shadow}},
             {VM::EIP_OVERFLOW, {100, VM::eip_overflow}},
