@@ -7605,7 +7605,10 @@ public:
                     const u8* match_ptr = static_cast<const u8*>(match);
                     const size_t index = static_cast<size_t>(match_ptr - base_ptr);
                     if (index + pattern_len > buffer_len) return false;
-                    if (memcmp(match_ptr, pattern, pattern_len) == 0) return true;
+                    if (memcmp(match_ptr, pattern, pattern_len) == 0){
+						debug("FIRMWARE: Detected scan_buffer");
+						return true;
+					}
                     search_ptr = match_ptr + 1;
                     remaining_bytes = buffer_len - static_cast<size_t>(search_ptr - base_ptr);
                 }
@@ -7662,9 +7665,10 @@ public:
                     if (strcmp(pattern, "Xen") == 0) {
                         constexpr char pxen[] = "PXEN";
                         constexpr size_t pxen_len = sizeof(pxen) - 1;
-                        if (!find_pattern(pxen, pxen_len))
+                        if (!find_pattern(pxen, pxen_len)){
+							debug("FIRMWARE: Detected targets XEN");
                             return core::add(brand_enum::XEN);
-                        else
+						}else
                             continue;
                     }
 
@@ -7672,9 +7676,10 @@ public:
                     if (strcmp(pattern, "BXPC") == 0) {
                         constexpr char bochs[] = "BOCHS";
                         constexpr size_t bochs_len = sizeof(bochs) - 1;
-                        if (!find_pattern(bochs, bochs_len))
+                        if (!find_pattern(bochs, bochs_len)){
+							debug("FIRMWARE: Detected targets BOCHS");
                             return core::add(brand_enum::BOCHS);
-                        else
+						}else
                             continue;
                     }
 
@@ -7768,6 +7773,7 @@ public:
                 work_buffer.resize(sz);
                 if (GetSystemFirmwareTable(acpi_signature, dsdt_swapped, work_buffer.data(), sz) == sz) {
                     if (scan_buffer(work_buffer.data(), work_buffer.size())) {
+						debug("FIRMWARE: Detected GetSystemFirmwareTable");
                         return true;
                     }
                 }
@@ -7784,13 +7790,14 @@ public:
             if (GetSystemFirmwareTable(provider, table_id, work_buffer.data(), sz) != sz) {
                 return false;
             }
-
+			debug("FIRMWARE: Detected fetch_and_scan");
             return scan_buffer(work_buffer.data(), sz);
         };
 
         // Scan every ACPI table
         for (const auto table_id : tables) {
             if (fetch_and_scan(acpi_signature, table_id)) {
+				debug("FIRMWARE: Detected acpi_signature");
                 return true;
             }
         }
@@ -7810,6 +7817,7 @@ public:
 
             for (const auto table_id : provider_tables) {
                 if (fetch_and_scan(prov, table_id)) {
+					debug("FIRMWARE: Detected FIRM RSMB");
                     return true;
                 }
             }
@@ -7905,6 +7913,7 @@ public:
 
             // Centralized scan on Linux-sourced table buffer
             if (scan_buffer(buffer.data(), file_size_u)) {
+				debug("FIRMWARE: Detected Centralized scan on Linux-sourced table buffer");
                 return true;
             }
         }
