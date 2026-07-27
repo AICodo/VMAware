@@ -7606,7 +7606,6 @@ public:
                     const size_t index = static_cast<size_t>(match_ptr - base_ptr);
                     if (index + pattern_len > buffer_len) return false;
                     if (memcmp(match_ptr, pattern, pattern_len) == 0){
-						debug("FIRMWARE: Detected scan_buffer");
 						return true;
 					}
                     search_ptr = match_ptr + 1;
@@ -7790,7 +7789,6 @@ public:
             if (GetSystemFirmwareTable(provider, table_id, work_buffer.data(), sz) != sz) {
                 return false;
             }
-			debug("FIRMWARE: Detected fetch_and_scan");
             return scan_buffer(work_buffer.data(), sz);
         };
 
