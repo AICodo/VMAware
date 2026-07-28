@@ -12942,7 +12942,7 @@ public:
             }
 
             if (exception_status == EXCEPTION_ILLEGAL_INSTRUCTION) {
-				std::cout << "[DEBUG] 666 SVM_EXCEPTIONS exception_status==EXCEPTION_ILLEGAL_INSTRUCTION continue, countop="<< (int)(countop-1) <<"EXCEPTION_ILLEGAL_INSTRUCTION=" << (int)EXCEPTION_ILLEGAL_INSTRUCTION << "\n";
+				std::cout << "[DEBUG] 666 SVM_EXCEPTIONS exception_status==EXCEPTION_ILLEGAL_INSTRUCTION continue, countop="<< (int)(countop-1) <<",EXCEPTION_ILLEGAL_INSTRUCTION=" << (int)EXCEPTION_ILLEGAL_INSTRUCTION << "\n";
                 continue;
             }
 
@@ -12950,7 +12950,7 @@ public:
                 debug("SVM_EXCEPTIONS: Detected SVM hypervisor hiding CPU capabilities");
                 return core::add(brand_enum::NULL_BRAND, 150);
             }
-			std::cout << "[DEBUG] 666 SVM_EXCEPTIONS last return true" << "\n";
+			std::cout << "[DEBUG] 666 SVM_EXCEPTIONS end return true,countop="<< (int)(countop-1) " << "\n";
             return true;
         }
     #endif
