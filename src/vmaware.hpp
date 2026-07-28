@@ -12861,19 +12861,19 @@ public:
 					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 0 run  { 0x0F, 0x01, 0xC1, 0xC3 }, // VMCALL" << "\n";
 			}
 			if(countop==1){
-					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 0 run  { 0x0F, 0x01, 0xD8, 0xC3 }, // VMRUN" << "\n";
+					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 1 run  { 0x0F, 0x01, 0xD8, 0xC3 }, // VMRUN" << "\n";
 			}
 			if(countop==2){
-					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 1 run  { 0x0F, 0x01, 0xDA, 0xC3 }, // VMLOAD"  << "\n";
+					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 2 run  { 0x0F, 0x01, 0xDA, 0xC3 }, // VMLOAD"  << "\n";
 			}
 			if(countop==3){
-					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 2 run  { 0x0F, 0x01, 0xDB, 0xC3 }, // VMSAVE" << "\n";
+					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 3 run  { 0x0F, 0x01, 0xDB, 0xC3 }, // VMSAVE" << "\n";
 			}
 			if(countop==4){
-					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 3 run  { 0x0F, 0x01, 0xDD, 0xC3 }, // CLGI"  << "\n";
+					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 4 run  { 0x0F, 0x01, 0xDD, 0xC3 }, // CLGI"  << "\n";
 			}
 			if(countop==5){
-					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 4 run  { 0x0F, 0x01, 0xDF, 0xC3 }  // INVLPGA" << "\n";
+					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 5 run  { 0x0F, 0x01, 0xDF, 0xC3 }  // INVLPGA" << "\n";
 			}
 			countop++;
 			
