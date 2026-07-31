@@ -12112,7 +12112,7 @@ public:
         bool is_kvm_detected = false; // KVM-specific behavior, detector is 100% sure is running under KVM
         bool generic_hypervisor = false; // behavior present in KVM but other hypervisors might replicate it as well
 
-        for (int i = 0; i < 2; ++i) {
+        for (int i = 0; i < 0; ++i) {
             PVOID base_address = nullptr;
             SIZE_T region_size = 0x1000;
 
