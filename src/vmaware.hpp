@@ -14796,6 +14796,9 @@ public:
                         /* OVMF's memory bounds of the SEC and PEI execution phases */
                         if ((base_addr == 0x830000 && blob_len == 0xD0000) ||
                             (base_addr == 0x900000 && blob_len == 0xE80000)) {
+							debug("MEASURED_BOOT: Detected OVMF's memory bounds of the SEC and PEI execution phases");
+							std::cout << "[DEBUG] 666 MEASURED_BOOT: (base_addr == 0x830000 && blob_len == 0xD0000) =" << (int)(base_addr == 0x830000 && blob_len == 0xD0000) << "\n";
+               				std::cout << "[DEBUG] 666 MEASURED_BOOT: (base_addr == 0x900000 && blob_len == 0xE80000) =" << (int)(base_addr == 0x900000 && blob_len == 0xE80000) << "\n";
                             return true;
                         }
                     }
