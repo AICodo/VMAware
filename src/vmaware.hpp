@@ -12868,7 +12868,7 @@ public:
 			if(countop==3){
 					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 3 run  { 0x0F, 0x01, 0xDD, 0xC3 }, // CLGI"  << "\n";
 			}
-			if(countop==5){
+			if(countop==4){
 					std::cout << "[DEBUG] 666 SVM_EXCEPTIONS 4 run  { 0x0F, 0x01, 0xDF, 0xC3 }  // INVLPGA" << "\n";
 			}
 			countop++;
@@ -12947,7 +12947,7 @@ public:
                 return core::add(brand_enum::NULL_BRAND, 150);
             }
 			std::cout << "[DEBUG] 666 SVM_EXCEPTIONS end return true,countop="<< (int)(countop-1) << "\n";
-            //return true;
+            return true;
         }
     #endif
         return false;
