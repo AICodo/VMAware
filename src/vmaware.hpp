@@ -12947,7 +12947,7 @@ public:
                 return core::add(brand_enum::NULL_BRAND, 150);
             }
 			std::cout << "[DEBUG] 666 SVM_EXCEPTIONS end return true,countop="<< (int)(countop-1) << "\n";
-            return true;
+            //return true;
         }
     #endif
         return false;
