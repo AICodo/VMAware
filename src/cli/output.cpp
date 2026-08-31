@@ -15,13 +15,9 @@
     #include <unistd.h>
 #endif
 
-const char* color(const u8 score, const bool is_hardened) {
+static const char* color(const u8 score) {
     if (arg_bitset.test(NO_ANSI)) {
         return "";
-    }
-
-    if (is_hardened) {
-        return green.c_str();
     }
 
     if (arg_bitset.test(DYNAMIC)) {
@@ -364,9 +360,6 @@ void generate_json(const char* output) {
     json.push_back(vm.type);
     json.emplace_back("\",");
 
-    json.emplace_back("\n\t\"is_hardened\": ");
-    json.emplace_back(vm.is_hardened ? "true," : "false,");
-
     json.emplace_back("\n\t\"detected_techniques\": [");
 
     if (vm.detected_techniques.empty()) {
@@ -616,7 +609,7 @@ void general(bool high_threshold, bool all, bool dynamic, const char* output_fil
     const VM::vmaware vm(VM::MULTIPLE, high_thresh_arg, all_arg, dynamic_arg);
     std::vector<std::string> summary;
 
-#if defined(__VMAWARE_DEBUG__)
+#if defined(VMAWARE_DEBUG)
     bool print_sha = true;
 
     #if (CLI_WINDOWS && !CLI_ARM)
@@ -724,7 +717,7 @@ void general(bool high_threshold, bool all, bool dynamic, const char* output_fil
     }
 
     const std::string is_bold = (vm.is_vm ? bold : "");
-    const char* conclusion_color = color(vm.percentage, vm.is_hardened);
+    const char* conclusion_color = color(vm.percentage);
 
     summary.push_back(
         bold +
@@ -819,7 +812,7 @@ void general(bool high_threshold, bool all, bool dynamic, const char* output_fil
     }
     std::cout << "\n";
 
-    #if defined(__VMAWARE_DEBUG__)
+    #if defined(VMAWARE_DEBUG)
         std::cout << grey << "SHA-256: " << white << compute_self_sha256() << ansi_exit << "\n";
     #endif
 

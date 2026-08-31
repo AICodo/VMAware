@@ -38,6 +38,11 @@ jobs:
         include:
           - arch: amd64
             compiler: g++
+          - arch: amd64-debug
+            compiler: g++
+            build_type: Debug
+            build_config: Debug
+            debug_output: ON
           - arch: arm64
             compiler: aarch64-linux-gnu-g++
             package: g++-aarch64-linux-gnu
@@ -70,6 +75,51 @@ jobs:
             compiler: s390x-linux-gnu-g++
             package: g++-s390x-linux-gnu
             processor: s390x
+          # Additional fully-supported Linux cross-compilers
+          - arch: alpha
+            compiler: alpha-linux-gnu-g++
+            package: g++-alpha-linux-gnu
+            processor: alpha
+          - arch: hppa
+            compiler: hppa-linux-gnu-g++
+            package: g++-hppa-linux-gnu
+            processor: hppa
+          - arch: m68k
+            compiler: m68k-linux-gnu-g++
+            package: g++-m68k-linux-gnu
+            processor: m68k
+          - arch: mips
+            compiler: mips-linux-gnu-g++
+            package: g++-mips-linux-gnu
+            processor: mips
+          - arch: mipsel
+            compiler: mipsel-linux-gnu-g++
+            package: g++-mipsel-linux-gnu
+            processor: mipsel
+          - arch: mips64
+            compiler: mips64-linux-gnuabi64-g++
+            package: g++-mips64-linux-gnuabi64
+            processor: mips64
+          - arch: powerpc
+            compiler: powerpc-linux-gnu-g++
+            package: g++-powerpc-linux-gnu
+            processor: powerpc
+          - arch: ppc64
+            compiler: powerpc64-linux-gnu-g++
+            package: g++-powerpc64-linux-gnu
+            processor: ppc64
+          - arch: sh4
+            compiler: sh4-linux-gnu-g++
+            package: g++-sh4-linux-gnu
+            processor: sh4
+          - arch: sparc64
+            compiler: sparc64-linux-gnu-g++
+            package: g++-sparc64-linux-gnu
+            processor: sparc64
+          - arch: x32
+            compiler: x86_64-linux-gnux32-g++
+            package: g++-x86-64-linux-gnux32
+            processor: x86_64
 
     steps:
       - uses: actions/checkout@v4
@@ -86,10 +136,11 @@ jobs:
             CROSS_ARGS="-DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.processor }}"
           fi
           cmake -B build \
-            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type || 'Release' }} \
+            -DDEBUG_OUTPUT=${{ matrix.debug_output || 'OFF' }} \
             -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
             $CROSS_ARGS
-          cmake --build build --config Release
+          cmake --build build --config ${{ matrix.build_config || 'Release' }}
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
@@ -170,6 +221,26 @@ jobs:
         include:
           - arch: aarch64
             cmake_arch: arm64
+          - arch: aarch64-debug
+            cmake_arch: arm64
+            build_type: Debug
+            build_config: Debug
+            debug_output: ON
+          - arch: x86_64
+            cmake_arch: x86_64
+          - arch: x86_64-debug
+            cmake_arch: x86_64
+            build_type: Debug
+            build_config: Debug
+            debug_output: ON
+          # macOS Universal fat binary configurations
+          - arch: universal
+            cmake_arch: "arm64;x86_64"
+          - arch: universal-debug
+            cmake_arch: "arm64;x86_64"
+            build_type: Debug
+            build_config: Debug
+            debug_output: ON
 
     steps:
       - uses: actions/checkout@v4
@@ -177,12 +248,13 @@ jobs:
       - name: Configure CMake
         run: |
           cmake -B build \
-            -DCMAKE_BUILD_TYPE=Dev_Release \
-            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.cmake_arch }} \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type || 'Dev_Release' }} \
+            -DDEBUG_OUTPUT=${{ matrix.debug_output || 'OFF' }} \
+            -DCMAKE_OSX_ARCHITECTURES="${{ matrix.cmake_arch }}" \
             -S ${{ github.workspace }}
 
       - name: Build
-        run: cmake --build build --config Release
+        run: cmake --build build --config ${{ matrix.build_config || 'Release' }}
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
@@ -290,6 +362,19 @@ jobs:
             build_config: Release
             debug_output: OFF
             artifact: vmaware-arm32_release.exe
+
+          # Windows 11 ARM64EC (Emulation Compatible)
+          - config: arm64ec-debug
+            platform: ARM64EC
+            build_config: Debug
+            debug_output: ON
+            artifact: vmaware-arm64ec_debug.exe
+
+          - config: arm64ec-release
+            platform: ARM64EC
+            build_config: Release
+            debug_output: OFF
+            artifact: vmaware-arm64ec_release.exe
 
     steps:
       - uses: actions/checkout@v4
@@ -465,21 +550,37 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download macOS binary
+      - name: Download macOS aarch64 binary
         uses: actions/download-artifact@v4
         with:
           name: vmaware-macos-aarch64
-          path: build
+          path: build/aarch64
 
-      - name: Full CLI output
-        run: |
-          chmod +x build/vmaware
-          build/vmaware || true
+      - name: Download macOS x86_64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: vmaware-macos-x86_64
+          path: build/x86_64
 
-      - name: Run CLI test suite
+      - name: Full CLI output (aarch64)
         run: |
-          chmod +x build/vmaware
-          bash auxiliary/test_cli.sh build/vmaware
+          chmod +x build/aarch64/vmaware
+          build/aarch64/vmaware || true
+
+      - name: Run CLI test suite (aarch64)
+        run: |
+          chmod +x build/aarch64/vmaware
+          bash auxiliary/test_cli.sh build/aarch64/vmaware
+
+      - name: Full CLI output (x86_64)
+        run: |
+          chmod +x build/x86_64/vmaware
+          build/x86_64/vmaware || true
+
+      - name: Run CLI test suite (x86_64)
+        run: |
+          chmod +x build/x86_64/vmaware
+          bash auxiliary/test_cli.sh build/x86_64/vmaware
 
   cli-test-windows:
     needs: [windows]
@@ -596,32 +697,69 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: vmaware-linux-amd64
-          path: build
+          path: build/release
 
-      - name: Make executable
-        run: chmod +x build/vmaware
+      - name: Download amd64 debug binary
+        uses: actions/download-artifact@v4
+        with:
+          name: vmaware-linux-amd64-debug
+          path: build/debug
 
-      - name: Check --detect = 1
+      - name: Make executable (Release)
+        run: chmod +x build/release/vmaware
+
+      - name: Check --detect = 1 (Release)
         run: |
-          result=$(build/vmaware --detect)
+          result=$(build/release/vmaware --detect)
           if [ "$result" != "1" ]; then
             echo "FAIL: --detect expected 1, got '$result'"
             exit 1
           fi
           echo "PASS: --detect = $result"
 
-      - name: Check --percent = 100
+      - name: Check --percent = 100 (Release)
         run: |
-          result=$(build/vmaware --percent)
+          result=$(build/release/vmaware --percent)
           if [ "$result" != "100" ]; then
             echo "FAIL: --percent expected 100, got '$result'"
             exit 1
           fi
           echo "PASS: --percent = $result"
 
-      - name: Check --brand = "Microsoft Azure Hyper-V"
+      - name: Check --brand = "Microsoft Azure Hyper-V" (Release)
         run: |
-          result=$(build/vmaware --brand)
+          result=$(build/release/vmaware --brand)
+          expected="Microsoft Azure Hyper-V"
+          if [ "$result" != "$expected" ]; then
+            echo "FAIL: --brand expected '$expected', got '$result'"
+            exit 1
+          fi
+          echo "PASS: --brand = $result"
+
+      - name: Make executable (Debug)
+        run: chmod +x build/debug/vmaware
+
+      - name: Check --detect = 1 (Debug)
+        run: |
+          result=$(build/debug/vmaware --detect)
+          if [ "$result" != "1" ]; then
+            echo "FAIL: --detect expected 1, got '$result'"
+            exit 1
+          fi
+          echo "PASS: --detect = $result"
+
+      - name: Check --percent = 100 (Debug)
+        run: |
+          result=$(build/debug/vmaware --percent)
+          if [ "$result" != "100" ]; then
+            echo "FAIL: --percent expected 100, got '$result'"
+            exit 1
+          fi
+          echo "PASS: --percent = $result"
+
+      - name: Check --brand = "Microsoft Azure Hyper-V" (Debug)
+        run: |
+          result=$(build/debug/vmaware --brand)
           expected="Microsoft Azure Hyper-V"
           if [ "$result" != "$expected" ]; then
             echo "FAIL: --brand expected '$expected', got '$result'"
@@ -634,27 +772,108 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: Download macOS binary
+      - name: Download macOS aarch64 binary
         uses: actions/download-artifact@v4
         with:
           name: vmaware-macos-aarch64
-          path: build
+          path: build/aarch64-release
 
-      - name: Make executable
-        run: chmod +x build/vmaware
+      - name: Download macOS aarch64 debug binary
+        uses: actions/download-artifact@v4
+        with:
+          name: vmaware-macos-aarch64-debug
+          path: build/aarch64-debug
 
-      - name: Check --detect = 1
+      - name: Download macOS x86_64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: vmaware-macos-x86_64
+          path: build/x86_64-release
+
+      - name: Download macOS x86_64 debug binary
+        uses: actions/download-artifact@v4
+        with:
+          name: vmaware-macos-x86_64-debug
+          path: build/x86_64-debug
+
+      - name: Make executable (aarch64 Release)
+        run: chmod +x build/aarch64-release/vmaware
+
+      - name: Check --detect = 1 (aarch64 Release)
         run: |
-          result=$(build/vmaware --detect)
+          result=$(build/aarch64-release/vmaware --detect)
           if [ "$result" != "1" ]; then
             echo "FAIL: --detect expected 1, got '$result'"
             exit 1
           fi
           echo "PASS: --detect = $result"
 
-      - name: Check --percent = 100
+      - name: Check --percent = 100 (aarch64 Release)
         run: |
-          result=$(build/vmaware --percent)
+          result=$(build/aarch64-release/vmaware --percent)
+          if [ "$result" != "100" ]; then
+            echo "FAIL: --percent expected 100, got '$result'"
+            exit 1
+          fi
+          echo "PASS: --percent = $result"
+
+      - name: Make executable (aarch64 Debug)
+        run: chmod +x build/aarch64-debug/vmaware
+
+      - name: Check --detect = 1 (aarch64 Debug)
+        run: |
+          result=$(build/aarch64-debug/vmaware --detect)
+          if [ "$result" != "1" ]; then
+            echo "FAIL: --detect expected 1, got '$result'"
+            exit 1
+          fi
+          echo "PASS: --detect = $result"
+
+      - name: Check --percent = 100 (aarch64 Debug)
+        run: |
+          result=$(build/aarch64-debug/vmaware --percent)
+          if [ "$result" != "100" ]; then
+            echo "FAIL: --percent expected 100, got '$result'"
+            exit 1
+          fi
+          echo "PASS: --percent = $result"
+
+      - name: Make executable (x86_64 Release)
+        run: chmod +x build/x86_64-release/vmaware
+
+      - name: Check --detect = 1 (x86_64 Release)
+        run: |
+          result=$(build/x86_64-release/vmaware --detect)
+          if [ "$result" != "1" ]; then
+            echo "FAIL: --detect expected 1, got '$result'"
+            exit 1
+          fi
+          echo "PASS: --detect = $result"
+
+      - name: Check --percent = 100 (x86_64 Release)
+        run: |
+          result=$(build/x86_64-release/vmaware --percent)
+          if [ "$result" != "100" ]; then
+            echo "FAIL: --percent expected 100, got '$result'"
+            exit 1
+          fi
+          echo "PASS: --percent = $result"
+
+      - name: Make executable (x86_64 Debug)
+        run: chmod +x build/x86_64-debug/vmaware
+
+      - name: Check --detect = 1 (x86_64 Debug)
+        run: |
+          result=$(build/x86_64-debug/vmaware --detect)
+          if [ "$result" != "1" ]; then
+            echo "FAIL: --detect expected 1, got '$result'"
+            exit 1
+          fi
+          echo "PASS: --detect = $result"
+
+      - name: Check --percent = 100 (x86_64 Debug)
+        run: |
+          result=$(build/x86_64-debug/vmaware --percent)
           if [ "$result" != "100" ]; then
             echo "FAIL: --percent expected 100, got '$result'"
             exit 1

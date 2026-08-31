@@ -65,8 +65,8 @@ message(STATUS "Compiler: ${COMPILER_NAME}")
 # Define preprocessor macros based on the build type
 # Use generator expressions so this works correctly with Visual Studio.
 add_compile_definitions(
-    $<$<CONFIG:Debug>:__VMAWARE_DEBUG__>
-    $<$<CONFIG:Release>:__VMAWARE_RELEASE__>
+    $<$<CONFIG:Debug>:VMAWARE_DEBUG>
+    $<$<CONFIG:Release>:VMAWARE_RELEASE>
 )
 
 # export compile commands for clang-tidy
@@ -175,9 +175,9 @@ target_compile_options(${TARGET} PRIVATE
 
 
 # extra flags
-option(DEBUG_OUTPUT "Force __VMAWARE_DEBUG__ define" OFF)
+option(DEBUG_OUTPUT "Force VMAWARE_DEBUG define" OFF)
 if(DEBUG_OUTPUT)
-    target_compile_definitions(${TARGET} PRIVATE __VMAWARE_DEBUG__)
+    target_compile_definitions(${TARGET} PRIVATE VMAWARE_DEBUG)
 endif()
 
 # CTest stuff

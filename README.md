@@ -2,7 +2,6 @@
    <img src="assets/banner.jpg" width="500" title="VMAware">
    <br>
    <img src="https://img.shields.io/github/actions/workflow/status/NotRequiem/VMAware/build_infrastructure.yml">
-   <img src="https://img.shields.io/github/downloads/NotRequiem/VMAware/total">
    <img src="https://img.shields.io/badge/License-MIT-yellow.svg">
    <br><br>
    <b>VMAware</b> (VM + Aware) is a cross-platform C++ framework for virtual machine detection.
@@ -15,7 +14,7 @@
 The library is:
 - Very easy to use
 - Cross-platform (Windows + MacOS + Linux)
-- Multi-architecture compatible (amd64, arm64, armhf, armel, i386, mips64el, ppc64el, riscv64, s390x)
+- Multi-architecture compatible (alpha, amd64, arm64, arm64ec, armel, armhf, hppa, i386, m68k, mips, mipsel, mips64, mips64el, powerpc, ppc64, ppc64el, riscv64, s390x, sh4, sparc64, x32)
 - Equipped with around 90 unique VM detection techniques [[list](https://github.com/NotRequiem/VMAware/blob/main/docs/documentation.md#flag-table)]
 - Built with the most cutting-edge techniques
 - Capable of detecting around 70 VM brands, including VMware, VirtualBox, QEMU, Hyper-V, and many more [[list](https://github.com/NotRequiem/VMAware/blob/main/docs/documentation.md#brand-table)]
@@ -46,7 +45,6 @@ int main() {
     std::cout << "VM name: " << VM::brand() << "\n";
     std::cout << "VM type: " << VM::type() << "\n";
     std::cout << "VM certainty: " << (int)VM::percentage() << "%" << "\n";
-    std::cout << "VM hardening: " << (VM::is_hardened() ? "likely" : "not found") << "\n";
 }
 ```
 
@@ -56,7 +54,6 @@ Virtual machine detected!
 VM name: VirtualBox
 VM type: Hypervisor (type 2)
 VM certainty: 100%
-VM hardening: not found
 ```
 
 <br>
@@ -152,8 +149,8 @@ VMAware also has support for a variety of languages, if C++ isn't the language y
 | Language | Repository | Details | Author |
 |:---------|:---------------:|:--------:|:------:|
 | <img src="assets/language_icons/8172-ruby-programming-language.webp" width="20"> Ruby | [link](https://github.com/NotRequiem/VMAware/tree/main/gem) | Official Ruby port embedded in the VMAware repository. Windows is not supported. | [Adam Ruman](https://github.com/addam128) |
-| <img src="assets/language_icons/js.png" width="20"> JS | [link](https://github.com/Kyun-J/node-vm-detect) | Very good API, actively maintained. | [Kyun-J](https://github.com/Kyun-J) |
-| <img src="assets/language_icons/rust-logo-512x512.png" width="20"> Rust | [link](https://github.com/MarcelDev/vmaware-rs) | Very good API, well tested, actively maintained | [Marcel](https://github.com/MarcelDev) |
+| <img src="assets/language_icons/js.png" width="20"> JS | [link](https://github.com/Kyun-J/node-vm-detect) | Same API as VMAware. Support for 64-bit only. Actively maintained. | [Kyun-J](https://github.com/Kyun-J) |
+| <img src="assets/language_icons/rust-logo-512x512.png" width="20"> Rust | [link](https://github.com/btwmarcel/vmaware-rs) | Binding. Same API as VMAware. Actively maintained | [Marcel](https://github.com/btwmarcel) |
 
 > [!WARNING]
 > Although unofficial ports exists, they are not tested compared to our official ones. Use them at your own risk.

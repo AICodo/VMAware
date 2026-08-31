@@ -124,7 +124,7 @@ void tui_manager::init() {
     left_y = start_y;
     exception_y = start_y;
 
-    #ifndef __VMAWARE_DEBUG__
+    #ifndef VMAWARE_DEBUG
         debugs.push_back(dim + std::string("Compile in debug mode to view detailed logs.") + ansi_exit);
     #endif
 

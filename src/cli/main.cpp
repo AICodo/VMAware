@@ -22,10 +22,10 @@
  *  - License: MIT
  */
 
-#ifndef __VMAWARE_DEBUG__
+#ifndef VMAWARE_DEBUG
     #if defined(_DEBUG)    /* MSVC Debug */       \
         || defined(DEBUG)     /* user or build-system */
-        #define __VMAWARE_DEBUG__
+        #define VMAWARE_DEBUG
     #endif
 #endif
 
@@ -45,7 +45,7 @@
     #include "windows_tui.hpp"
     #include <windows.h>
     #include <shellapi.h>
-    #ifdef __VMAWARE_DEBUG__
+    #ifdef VMAWARE_DEBUG
         #define _CRTDBG_MAP_ALLOC
         #include <crtdbg.h>
     #endif
@@ -178,7 +178,7 @@ constexpr const char* date = "August 2026";
     std::exit(0);
 }
 
-#if (CLI_WINDOWS && defined __VMAWARE_DEBUG__)
+#if (CLI_WINDOWS && defined VMAWARE_DEBUG)
     static void enable_crt_leak_check()
     {
         int flags = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
@@ -192,7 +192,7 @@ constexpr const char* date = "August 2026";
 
 int main(int argc, char* argv[]) {
 #if (CLI_WINDOWS && !CLI_ARM)
-    #ifdef __VMAWARE_DEBUG__
+    #ifdef VMAWARE_DEBUG
         enable_crt_leak_check();
     #endif
     bool rich_requested = false;
@@ -238,12 +238,13 @@ int main(int argc, char* argv[]) {
         sei.nShow = SW_SHOWNORMAL;
 
         if (!IsDebuggerPresent() && ShellExecuteExA(&sei)) {
-            ExitProcess(0);
+            ExitProcess(ERROR_SUCCESS);
         }
+
+        AddVectoredExceptionHandler(1, exception_handler_logger);
     }
 
     win_ansi_enabler_t ansi_enabler;
-    AddVectoredExceptionHandler(1, exception_handler_logger);
 #endif
 
     const std::vector<std::string> args(argv + 1, argv + argc);

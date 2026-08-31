@@ -195,10 +195,10 @@
 #ifndef VMAWARE_HEADER
 #define VMAWARE_HEADER
 
-#ifndef __VMAWARE_DEBUG__
+#ifndef VMAWARE_DEBUG
     #if defined(_DEBUG)    /* MSVC Debug */       \
     || defined(DEBUG)     /* user or build-system */
-        #define __VMAWARE_DEBUG__
+        #define VMAWARE_DEBUG
     #endif
 #endif
 
@@ -235,26 +235,32 @@
 #endif
 
 #if VMAWARE_CPLUSPLUS >= 202302L
-    #define VMA_CPP 23
+    #define VMAWARE_CPP 23
 #elif VMAWARE_CPLUSPLUS >= 202002L
-    #define VMA_CPP 20
+    #define VMAWARE_CPP 20
 #elif VMAWARE_CPLUSPLUS >= 201703L
-    #define VMA_CPP 17
+    #define VMAWARE_CPP 17
 #elif VMAWARE_CPLUSPLUS >= 201402L
-    #define VMA_CPP 14
+    #define VMAWARE_CPP 14
 #elif VMAWARE_CPLUSPLUS >= 201103L
-    #define VMA_CPP 11
+    #define VMAWARE_CPP 11
 #elif VMAWARE_CPLUSPLUS >= 199711L
-    #define VMA_CPP 98 /* C++98 or C++03 */
+    #define VMAWARE_CPP 98 /* C++98 or C++03 */
 #else
     #error "Unsupported C++ standard (pre-C++98 or unknown)."
 #endif
     
-#if (VMA_CPP < 11 && !WINDOWS)
+#if (VMAWARE_CPP < 11 && !WINDOWS)
     #error "VMAware only supports C++11 or above, set your compiler flag to '-std=c++20' for gcc/clang, or '/std:c++20' for MSVC"
 #endif
         
-#if defined(__x86_64__) || defined(_M_X64)
+#if defined(_M_ARM64EC) || defined(__arm64ec__)
+    #define ARM64EC 1
+#else
+    #define ARM64EC 0
+#endif
+
+#if (defined(__x86_64__) || defined(_M_X64)) && !ARM64EC
     #define x86_64 1
 #else
     #define x86_64 0
@@ -272,7 +278,7 @@
     #define x86 0
 #endif
     
-#if defined(__aarch64__) || defined(_M_ARM64) || defined(__ARM_LINUX_COMPILER__)
+#if (defined(__aarch64__) || defined(_M_ARM64) || defined(__ARM_LINUX_COMPILER__) || defined(__arm64__)) && !ARM64EC
     #define ARM64 1
 #else
     #define ARM64 0
@@ -290,12 +296,6 @@
     #define ARM 0
 #endif
 
-#if (!APPLE && (VMA_CPP >= 20) && (!CLANG || __clang_major__ >= 16))
-    #define VMAWARE_SOURCE_LOCATION_SUPPORTED 1
-#else
-    #define VMAWARE_SOURCE_LOCATION_SUPPORTED 0
-#endif
-
 #if defined(__clang__)
     #define GCC 0
     #define CLANG 1
@@ -307,11 +307,17 @@
     #define CLANG 0
 #endif
 
-#if !(defined(WINDOWS) || defined(LINUX) || defined(APPLE))
+#if !(WINDOWS || LINUX || APPLE)
     #warning "Unknown OS detected, tests will be severely limited"
 #endif
 
-#if (VMA_CPP >= 14)
+#if (!APPLE && (VMAWARE_CPP >= 20) && (!CLANG || __clang_major__ >= 16))
+    #define VMAWARE_SOURCE_LOCATION_SUPPORTED 1
+#else
+    #define VMAWARE_SOURCE_LOCATION_SUPPORTED 0
+#endif
+
+#if (VMAWARE_CPP >= 14)
     #define VMAWARE_DEPRECATED(msg) [[deprecated(msg)]]
 #elif (MSVC)
     #define VMAWARE_DEPRECATED(msg) __declspec(deprecated(msg))
@@ -321,16 +327,40 @@
     #define VMAWARE_DEPRECATED(msg)
 #endif
 
-#if (VMA_CPP >= 17)
+#if defined(VMAWARE_SHARED)
+    #if (VMAWARE_MSVC)
+        #ifdef VMAWARE_DLL_EXPORT
+            #define VMAWARE_API __declspec(dllexport)
+        #else
+            #define VMAWARE_API __declspec(dllimport)
+        #endif
+    #elif (VMAWARE_GCC || VMAWARE_CLANG)
+        #define VMAWARE_API __attribute__((visibility("default")))
+    #else
+        #define VMAWARE_API
+    #endif
+#else
+    #define VMAWARE_API
+#endif
+
+#if (VMAWARE_CPP >= 17)
     #define VMAWARE_CONSTEXPR constexpr
 #else
     #define VMAWARE_CONSTEXPR
 #endif
 
-#if (VMA_CPP >= 20)
+#if (VMAWARE_CPP >= 20)
     #define VMAWARE_CONSTEXPR_20 constexpr
 #else
     #define VMAWARE_CONSTEXPR_20
+#endif
+
+#if (MSVC)
+    #define VMAWARE_NOINLINE __declspec(noinline)
+#elif (CLANG || GCC)
+    #define VMAWARE_NOINLINE __attribute__((noinline))
+#else
+    #define VMAWARE_NOINLINE
 #endif
 
 #if (MSVC)
@@ -349,11 +379,13 @@
     #define VMAWARE_RESTRICT
 #endif
 
-#if (CLANG)
+#if (VMAWARE_CPP >= 23)
+    #define VMAWARE_ASSUME(cond) [[assume(cond)]]
+#elif (VMAWARE_CLANG)
     #define VMAWARE_ASSUME(cond) __builtin_assume(cond)
-#elif (MSVC)
+#elif (VMAWARE_MSVC)
     #define VMAWARE_ASSUME(cond) __assume(cond)
-#elif (GCC)
+#elif (VMAWARE_GCC)
     #define VMAWARE_ASSUME(cond) do { if (!(cond)) __builtin_unreachable(); } while(0)
 #else
     #define VMAWARE_ASSUME(cond) do { (void)(cond); } while(0)
@@ -385,14 +417,12 @@
     #if (MSVC) || defined(__vectorcall)
         #define VMAWARE_VECTORCALL __vectorcall
     #elif (GCC || CLANG)
-        #if (x86)
-            #define VMAWARE_VECTORCALL __attribute__((vectorcall))
-        #else
-            #define VMAWARE_VECTORCALL
-        #endif
+        #define VMAWARE_VECTORCALL __attribute__((vectorcall))
     #else
         #define VMAWARE_VECTORCALL
     #endif
+#else
+    #define VMAWARE_VECTORCALL
 #endif
 
 #if (GCC || CLANG)
@@ -405,6 +435,12 @@
     #define TARGET_AVX512
 #endif
 
+#if (GCC || CLANG)
+    #define VMAWARE_SERIALIZE __attribute__((__target__("serialize")))
+#else
+    #define VMAWARE_SERIALIZE
+#endif
+
 #define VMAWARE_UNUSED(x) ((void)(x))
 
 #if (CLANG)
@@ -413,28 +449,25 @@
     #pragma clang diagnostic ignored "-Wunused-local-typedef"
 #endif
 
-#if (VMA_CPP >= 23)
-    #include <limits>
+#if (VMAWARE_SOURCE_LOCATION_SUPPORTED)
+    #include <source_location>
 #endif
-#if (VMA_CPP >= 20)
+#if (VMAWARE_CPP >= 20)
     #include <bit>
-    #include <cstddef>
-#include <ranges>
-    #if (VMAWARE_SOURCE_LOCATION_SUPPORTED)
-        #include <source_location>
-    #endif
 #endif
-#if (VMA_CPP >= 17)
+#if (VMAWARE_CPP >= 17)
     #include <filesystem>
-    #include <system_error>
 #endif
-#ifdef __VMAWARE_DEBUG__
+#ifdef VMAWARE_DEBUG
     #include <iomanip>
     #include <ios>
     #include <locale>
     #include <codecvt>
 #endif
-
+#include <limits>
+#include <cstddef>
+#include <system_error>
+#include <ranges>
 #include <cstdio>
 #include <functional>
 #include <cstring>
@@ -459,7 +492,14 @@
 
 #if (WINDOWS)
     #include <windows.h>
-    #include <intrin.h>
+    #if (MSVC) /* Targets clang-cl too */
+        #include <intrin.h>
+    #elif (GCC || CLANG)
+        #if (x86)
+            #include <x86intrin.h> /* Although Clang provides a compatibility header for it when targeting Windows environments */
+            #include <immintrin.h>
+        #endif
+    #endif
     #include <winioctl.h>
     #include <winternl.h>
     #include <powerbase.h>
@@ -468,7 +508,6 @@
     #include <devpkey.h>
     #include <devguid.h>
     #include <bcrypt.h>
-    #include <winhvplatform.h>
 
     #pragma comment(lib, "setupapi.lib")
     #pragma comment(lib, "powrprof.lib")
@@ -514,7 +553,7 @@
     #include <chrono>
 #endif
 
-#ifdef __VMAWARE_DEBUG__
+#ifdef VMAWARE_DEBUG
     #define debug(...) VM::util::debug_msg(__VA_ARGS__)
 #else
     #define debug(...)
@@ -813,7 +852,6 @@ public:
     };
 
     enum class brand_enum : u8 {
-        INVALID,
         VBOX,
         VMWARE,
         VMWARE_EXPRESS,
@@ -889,7 +927,6 @@ public:
 
     static constexpr u8 enum_size = MULTIPLE; /* get enum size through value of last element */
     static constexpr u8 settings_count = static_cast<u8>(MULTIPLE - HIGH_THRESHOLD + 1); /* get number of settings technique flags */
-    static constexpr u8 INVALID = 255; /* explicit invalid technique macro */
     static constexpr u16 base_technique_count = HIGH_THRESHOLD; /* original technique count, constant on purpose (can also be used as a base count value if custom techniques are added) */
     static constexpr u16 threshold_score = 150; /* standard threshold score */
     static constexpr u16 high_threshold_score = 300; /* new threshold score from 150 to 300 if VM::HIGH_THRESHOLD flag is enabled */
@@ -1006,36 +1043,33 @@ public:
                 amd_easter_egg = 0x8fffffff;
         };
 
-        static void cpuid_count (
-            unsigned leaf, 
-            unsigned subleaf, 
-            unsigned* VMAWARE_RESTRICT a, 
-            unsigned* VMAWARE_RESTRICT b, 
-            unsigned* VMAWARE_RESTRICT c, 
-            unsigned* VMAWARE_RESTRICT d
+        /* Internal helper using C++ references */
+        static void cpuid_count(
+            const u32 leaf,
+            const u32 subleaf,
+            u32& a,
+            u32& b,
+            u32& c,
+            u32& d
         ) noexcept {
-            VMAWARE_ASSUME(a != nullptr);
-            VMAWARE_ASSUME(b != nullptr);
-            VMAWARE_ASSUME(c != nullptr);
-            VMAWARE_ASSUME(d != nullptr);
         #if (x86)
             #if (MSVC)
-                int regs[4];
+                int regs[4] = { 0 };
                 __cpuidex(regs, static_cast<int>(leaf), static_cast<int>(subleaf));
-                *a = static_cast<unsigned int>(regs[0]);
-                *b = static_cast<unsigned int>(regs[1]);
-                *c = static_cast<unsigned int>(regs[2]);
-                *d = static_cast<unsigned int>(regs[3]);
-            #elif (x86)
-                __get_cpuid_count(leaf, subleaf, a, b, c, d);
+                a = static_cast<u32>(regs[0]);
+                b = static_cast<u32>(regs[1]);
+                c = static_cast<u32>(regs[2]);
+                d = static_cast<u32>(regs[3]);
             #else
-                VMAWARE_UNUSED(leaf); 
-                VMAWARE_UNUSED(subleaf); 
-                VMAWARE_UNUSED(a); 
-                VMAWARE_UNUSED(b); 
-                VMAWARE_UNUSED(c); 
-                VMAWARE_UNUSED(d);
-            #endif
+                __cpuid_count(leaf, subleaf, a, b, c, d);
+            #endif  
+        #else
+            VMAWARE_UNUSED(leaf);
+            VMAWARE_UNUSED(subleaf);
+            VMAWARE_UNUSED(a);
+            VMAWARE_UNUSED(b);
+            VMAWARE_UNUSED(c);
+            VMAWARE_UNUSED(d);
         #endif
         }
 
@@ -1048,18 +1082,16 @@ public:
             c = 0;
             d = 0;
 
-            u32 aa = 0u;
-            u32 bb = 0u;
-            u32 cc = 0u;
-            u32 dd = 0u;
-            cpuid_count(a_leaf, c_leaf, &aa, &bb, &cc, &dd);
-
-            a = aa;
-            b = bb;
-            c = cc;
-            d = dd;
+            cpuid_count(a_leaf, c_leaf, a, b, c, d);
+        #else
+            VMAWARE_UNUSED(a);
+            VMAWARE_UNUSED(b);
+            VMAWARE_UNUSED(c);
+            VMAWARE_UNUSED(d);
+            VMAWARE_UNUSED(a_leaf);
+            VMAWARE_UNUSED(c_leaf);
         #endif
-        };
+        }
 
         /* Same as above but for array type parameters (MSVC specific) */
         static void cpuid(i32 x[4], const u32 a_leaf, const u32 c_leaf = 0xFF) noexcept {
@@ -1070,18 +1102,19 @@ public:
             x[2] = 0;
             x[3] = 0;
 
-            u32 aa = 0u;
-            u32 bb = 0u;
-            u32 cc = 0u;
-            u32 dd = 0u;
-            cpuid_count(a_leaf, c_leaf, &aa, &bb, &cc, &dd);
+            u32 a = 0u, b = 0u, c = 0u, d = 0u;
+            cpuid_count(a_leaf, c_leaf, a, b, c, d);
 
-            x[0] = static_cast<i32>(aa);
-            x[1] = static_cast<i32>(bb);
-            x[2] = static_cast<i32>(cc);
-            x[3] = static_cast<i32>(dd);
+            x[0] = static_cast<i32>(a);
+            x[1] = static_cast<i32>(b);
+            x[2] = static_cast<i32>(c);
+            x[3] = static_cast<i32>(d);
+        #else
+            VMAWARE_UNUSED(x);
+            VMAWARE_UNUSED(a_leaf);
+            VMAWARE_UNUSED(c_leaf);
         #endif
-        };
+        }
 
         [[nodiscard]] static bool is_leaf_supported(const u32 p_leaf) noexcept {
         #if (APPLE) 
@@ -1164,7 +1197,7 @@ public:
             cpu::cpuid(regs[8], regs[9], regs[10], regs[11], cpu::leaf::brand3);
 
             static char buffer[49];
-            memcpy(buffer, regs, sizeof(regs));
+            std::memcpy(buffer, regs, sizeof(regs));
             buffer[48] = '\0';
 
             /*
@@ -1218,7 +1251,7 @@ public:
 
             u32 regs[3] = { ebx, ecx, edx };
 
-            memcpy(buffers[index], regs, sizeof(regs));
+            std::memcpy(buffers[index], regs, sizeof(regs));
             buffers[index][12] = '\0';
 
             *cache = buffers[index];
@@ -1656,6 +1689,7 @@ public:
                 { "i3-9350KF", 4, false },
                 { "i3-N300", 8, false },
                 { "i3-N305", 8, false },
+                { "i3-14100TE", 8, true },
 
                 /* i5 series */
                 { "i5-10200H", 8, true },
@@ -2016,6 +2050,8 @@ public:
                 { "i5-14600K", 20, true },
                 { "i5-14600KF", 20, true },
                 { "i5-14600T", 20, true },
+                { "i5-14501E", 12, true },
+                { "i5-14501TE", 12, true },
 
                 /* i7 series */
                 { "i7-10510U", 8, true },
@@ -2356,6 +2392,9 @@ public:
                 { "i7-14700T", 28, true },
                 { "i7-14790F", 24, true },
                 { "i7-14950HX", 24, true },
+                { "i7-14700TE", 28, true },
+                { "i7-14701E", 16, true },
+                { "i7-14701TE", 16, true },
 
                 /* i9 series */
                 { "i9-7900X", 20, true },
@@ -2435,7 +2474,10 @@ public:
                 { "i9-14900KF", 32, true },
                 { "i9-14900KS", 32, true },
                 { "i9-14900T", 32, true },
-                { "i9-14901KE", 16, true }
+                { "i9-14901KE", 16, true },
+                { "i9-14900TE", 32, true },
+                { "i9-14901E", 16, true },
+                { "i9-14901TE", 16, true }
             };
 
             static_assert(sizeof(db) / sizeof(cpu_entry) > 0, "Intel Core database must contain at least one entry.");
@@ -2522,6 +2564,24 @@ public:
                 { "E-2288G", 16, true },
                 { "E-2276M", 12, true },
                 { "E-2286M", 16, true },
+                { "E-2314", 4, false },
+                { "E-2324G", 4, false },
+                { "E-2334", 8, true },
+                { "E-2336", 12, true },
+                { "E-2356G", 12, true },
+                { "E-2374G", 8, true },
+                { "E-2378", 16, true },
+                { "E-2378G", 16, true },
+                { "E-2386G", 12, true },
+                { "E-2388G", 16, true },
+                { "E-2414", 4, false },
+                { "E-2434", 8, true },
+                { "E-2436", 12, true },
+                { "E-2456", 12, true },
+                { "E-2468", 16, true },
+                { "E-2478", 16, true },
+                { "E-2486", 12, true },
+                { "E-2488", 16, true },
 
                 /* Xeon W */
                 { "W-2102", 4, false },
@@ -2586,35 +2646,88 @@ public:
 
         static void get_intel_ultra_db(const cpu_entry*& out_ptr, size_t& out_size) noexcept {
             static constexpr cpu_entry db[] = {
-                /* Series 2 (Arrow Lake - Desktop/Mobile) - No SMT/HT on P-Cores */
+                /* Series 2 (Arrow Lake - Desktop/Mobile) */
                 { "285K", 24, false },
                 { "265K", 20, false },
                 { "265KF", 20, false },
                 { "245K", 14, false },
                 { "245KF", 14, false },
 
-                /* Series 2 (Lunar Lake - Mobile) - No HT on P-Cores */
+                /* Series 2 (Arrow Lake-S Desktop Non-K and T) */
+                { "285", 24, false },
+                { "285T", 24, false },
+                { "265", 20, false },
+                { "265F", 20, false },
+                { "265T", 20, false },
+                { "245", 14, false },
+                { "245T", 14, false },
+                { "235", 14, false },
+                { "235T", 14, false },
+                { "225", 10, false },
+                { "225F", 10, false },
+                { "205", 8, false },
+
+                /* Series 2 (Arrow Lake-S Desktop Plus) */
+                { "270K Plus", 24, false },
+                { "250K Plus", 18, false },
+                { "250KF Plus", 18, false },
+
+                /* Series 2 (Arrow Lake-HX Mobile) */
+                { "285HX", 24, false },
+                { "275HX", 24, false },
+                { "265HX", 20, false },
+                { "255HX", 20, false },
+                { "245HX", 14, false },
+                { "235HX", 14, false },
+
+                /* Series 2 (Lunar Lake - Mobile) */
                 { "288V", 8, false },
                 { "268V", 8, false },
                 { "258V", 8, false },
+                { "266V", 8, false },
+                { "256V", 8, false },
+                { "238V", 8, false },
+                { "236V", 8, false },
+                { "228V", 8, false },
+                { "226V", 8, false },
+
+                /* Series 2 (Arrow Lake-HX Mobile Plus) */
+                { "290HX Plus", 24, false },
+                { "270HX Plus", 24, false },
+
+                /* Series 2 (Arrow Lake-H Mobile) */
+                { "285H", 16, false },
+                { "265H", 16, false },
+                { "255H", 16, false },
+                { "235H", 14, false },
+                { "225H", 14, false },
+
+                /* Series 2 (Arrow Lake-U Mobile) */
+                { "265U", 14, true },
+                { "255U", 14, true },
+                { "235U", 14, true },
+                { "225U", 14, true },
+
+                /* Series 2 (Arrow Lake-S Entry Level) */
+                { "235A", 14, false },
+                { "235TA", 14, false },
+                { "235UA", 14, true },
 
                 /*
-                 * Series 1 (Meteor Lake - Mobile) - P-Cores have SMT/HT
-                 * 6P + 8E + 2LP = 16 Cores. Threads = (6*2) + 8 + 2 = 22 Threads
+                 * Series 1 (Meteor Lake - Mobile)
                  */
                 { "185H", 22, true },
                 { "165H", 22, true },
                 { "155H", 22, true },
-
-                /* 4P + 8E + 2LP = 14 Cores. Threads = (4*2) + 8 + 2 = 18 Threads */
                 { "135H", 18, true },
                 { "125H", 18, true },
-
-                /* 2P + 8E + 2LP = 12 Cores. Threads = (2*2) + 8 + 2 = 14 Threads */
                 { "165U", 14, true },
                 { "155U", 14, true },
+                { "150U", 12, true },
                 { "135U", 14, true },
                 { "125U", 14, true },
+                { "120U", 12, true },
+                { "100U", 8, true }
             };
 
             static_assert(sizeof(db) / sizeof(cpu_entry) > 0, "Intel Ultra database must contain at least one entry.");
@@ -2700,10 +2813,20 @@ public:
                 { "a8-8600p", 4, false },
                 { "a8-8650b", 4, false },
 
-                /* AI Series (Strix Point) - Hybrid, but both Zen 5 and Zen 5c support SMT */
-                { "365", 20, true }, /* Ryzen AI 7 365 */
-                { "370", 24, true }, /* Ryzen AI 9 HX 370 */
-                { "375", 24, true }, /* Ryzen AI 9 HX 375 */
+                /* AI Series (Strix Point) */
+                { "365", 20, true },
+                { "370", 24, true }, 
+                { "375", 24, true }, 
+                { "350", 16, true },
+                { "340", 12, true },
+
+                /* Ryzen AI PRO 300 Series (Enterprise Strix/Krackan Point) */
+                { "pro-340", 12, true },
+                { "pro-350", 16, true },
+                { "pro-360", 16, true },
+                { "pro-365", 20, true },
+                { "pro-370", 24, true },
+                { "pro-375", 24, true },
 
                 /* Athlon */
                 { "3050c", 2, false },
@@ -3086,6 +3209,7 @@ public:
                 { "9950x", 32, true },
                 { "9950x3d", 32, true },
                 { "9955hx", 32, true },
+                { "9600x3d", 12, true },
                 { "5945", 24, true },
                 { "6950h", 16, true },
                 { "6950hs", 16, true },
@@ -3133,19 +3257,20 @@ public:
         }
     };
 
-    static VMAWARE_CONSTEXPR void str_copy(char* VMAWARE_RESTRICT dest, const char* VMAWARE_RESTRICT src, const size_t max_len) noexcept {
-        VMAWARE_ASSUME(dest != nullptr);
-        VMAWARE_ASSUME(src != nullptr);
+    template <std::size_t N>
+    static inline void str_copy(char(&dest)[N], const char* VMAWARE_RESTRICT src) noexcept {
+        static_assert(N > 0, "Destination buffer must have non-zero size");
 
-        size_t i = 0;
-        if (max_len == 0) return;
-
-        while (src[i] != '\0' && i < max_len - 1) {
-            dest[i] = src[i];
-            i++;
+        if (!src) {
+            dest[0] = '\0';
+            return;
         }
 
-        dest[i] = '\0';
+        const char* const end = static_cast<const char*>(std::memchr(src, '\0', N));
+        const std::size_t copy_len = end ? static_cast<std::size_t>(end - src) : (N - 1);
+
+        std::memcpy(dest, src, copy_len);
+        dest[copy_len] = '\0';
     }
 
     /* Memoization */
@@ -3257,7 +3382,7 @@ public:
             static bool cached;
 
             static void store(const char* s, const flagset& flags) noexcept {
-                str_copy(cache, s, sizeof(cache));
+                str_copy(cache, s);
                 cached_flags = flags;
                 cached = true;
             }
@@ -3276,7 +3401,7 @@ public:
             static bool cached;
 
             static void store(const char* s) noexcept {
-                str_copy(brand_cache, s, sizeof(brand_cache));
+                str_copy(brand_cache, s); 
                 cached = true;
             }
 
@@ -3377,13 +3502,18 @@ public:
             }
 
             static VMAWARE_CONSTEXPR void store_manufacturer(const char* VMAWARE_RESTRICT s) noexcept {
-                if (!s) { 
-                    manufacturer[0] = '\0'; 
-                    return; 
+                if (!s) {
+                    manufacturer[0] = '\0';
+                    return;
                 }
-                const size_t n = strlen(s);
                 const size_t cap = sizeof(manufacturer) - 1;
-                const size_t tocopy = (n > cap) ? cap : n;
+
+                size_t n = 0;
+                while (n < cap && s[n] != '\0') {
+                    n++;
+                }
+
+                const size_t tocopy = n;
                 for (size_t i = 0; i < tocopy; ++i) {
                     manufacturer[i] = s[i];
                 }
@@ -3396,9 +3526,14 @@ public:
                     model[0] = '\0';
                     return; 
                 }
-                const size_t n = strlen(s);
-                const size_t cap = sizeof(model) - 1;
-                const size_t tocopy = (n > cap) ? cap : n;
+                const size_t cap = sizeof(manufacturer) - 1;
+
+                size_t n = 0;
+                while (n < cap && s[n] != '\0') {
+                    n++;
+                }
+
+                const size_t tocopy = n;
                 for (size_t i = 0; i < tocopy; ++i) {
                     model[i] = s[i];
                 }
@@ -3521,17 +3656,18 @@ public:
             
             /*
              *  Golden Rules (must happen ALWAYS; if they don't happen the check should be aborted):
-             *  1. The check needs AT LEAST two different physical cores, so if one single core is detected, returns
-             *  2. The counter thread should always be in the middle available physical CPU when there's more than 2 cores, and in the core 2 (1-indexed) when there's 2 cores
-             *  3. The counter thread and the measurement thread can't never be in the same physical core. This means that SMT siblings should always be avoided.
+             *  1. The check needs AT LEAST two different physical cores, so if one single core is detected, returns {}
+             *  2. The counter thread should always be in the middle available physical CPU when there's more than 2 cores, and in core 2 (1-indexed) when there's 2 cores
+             *  3. The counter thread and the measurement thread can NEVER be in the same physical core (SMT siblings strictly excluded).
              *
              *  Silver Rules (in order of priority):
-             *  1. Prioritize higher-performance pipelines (P-cores) over efficiency-oriented pipelines (E-cores) for the measurement thread (+800). P-cores feature private L2 caches (no cluster controller congestion).
-             *  2. Prioritize candidates within the same NUMA node (+1000) and same L3 cache slice/CCD domain (+500) to ensure minimal latency (preventing cross-CCD Infinity Fabric or cross-socket routing delays).
-             *  3. Deduct points (-800) for candidate cores that share an L2 cache with the counter thread but reside on different physical cores (targeting and resolving Intel E-core cluster L2 controller bottlenecks).
-             *  4. Prioritize cores with matching efficiency classes (+100) to align power and frequency (DVFS) domains.
-             *  5. Apply a minor index-distance penalty to select the closest physical neighbor on the silicon layout/ring bus stop (best-effort only because logical indexing does not always prove physical proximity).
-             *  6. Penalize edge logical cores (-50) because those are where most OS interrupt and background DPC scheduler noise occur.
+             *  1. Same NUMA Node (+1000) & Same L3 Cache / CCD domain (+500) to ensure minimal interconnect & MESI invalidation latency.
+             *  2. Prioritize higher-performance pipelines (P-cores) over efficiency-oriented pipelines (E-cores) (+800) for dedicated L2 cache pipelines.
+             *  3. Deduct points (-800) for candidate cores that share an L2 cache cluster with the counter thread (targeting Intel E-core cluster bottlenecks).
+             *  4. Prioritize cores with matching efficiency classes (+100) to align DVFS frequency scaling domains.
+             *  5. Prefer Primary SMT thread (+20) over secondary hyperthread siblings.
+             *  6. Apply a minor index-distance penalty (-1 per logical distance) to select the closest neighbor on the ring bus.
+             *  7. Penalize edge logical cores and Physical Core 0 (-50) to avoid OS interrupt and DPC scheduler noise.
             */
             [[nodiscard]] static GROUP_AFFINITY get_mask(const bool measurement) {
                 const HANDLE current_process = reinterpret_cast<HANDLE>(-1LL);
@@ -3540,11 +3676,9 @@ public:
                 GROUP_AFFINITY active_group_aff{};
                 DWORD_PTR proc_mask = 0, sys_mask = 0;
 
-                /* Base our available CPU pool on the process-wide affinity mask instead of the thread's currently restricted affinity mask. Threads are frequently restricted to a single core by runtime schedulers or thread-pools, while the process retains access to all cores. */
                 if (GetProcessAffinityMask(current_process, &proc_mask, &sys_mask) && proc_mask) {
                     active_group_aff.Mask = proc_mask;
 
-                    /* Query the executing thread's current group to ensure both threads run on the same processor group/physical socket to avoid severe interconnect latency */
                     GROUP_AFFINITY thread_aff{};
                     if (GetThreadGroupAffinity(current_thread, &thread_aff)) {
                         active_group_aff.Group = thread_aff.Group;
@@ -3560,28 +3694,34 @@ public:
                 const WORD target_group = active_group_aff.Group;
                 const KAFFINITY target_mask = active_group_aff.Mask;
 
-                DWORD len = 0;
-                SetLastError(ERROR_SUCCESS);
-                GetLogicalProcessorInformationEx(RelationAll, nullptr, &len);
-                if (GetLastError() != ERROR_INSUFFICIENT_BUFFER || !len) {
-                    return {};
-                }
+                alignas(SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX) BYTE stack_topo[4096]{};
+                DWORD len = sizeof(stack_topo);
 
-                std::vector<BYTE> topo(len);
-                if (!GetLogicalProcessorInformationEx(
-                    RelationAll,
-                    reinterpret_cast<PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(topo.data()),
-                    &len)) {
-                    return {};
+                std::vector<BYTE> heap_topo;
+                PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX topo_ptr =
+                    reinterpret_cast<PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(stack_topo);
+
+                if (!GetLogicalProcessorInformationEx(RelationAll, topo_ptr, &len)) {
+                    if (GetLastError() == ERROR_INSUFFICIENT_BUFFER && len > sizeof(stack_topo)) {
+                        heap_topo.resize(len);
+                        topo_ptr = reinterpret_cast<PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(heap_topo.data());
+                        if (!GetLogicalProcessorInformationEx(RelationAll, topo_ptr, &len)) {
+                            return {};
+                        }
+                    }
+                    else {
+                        return {};
+                    }
                 }
 
                 struct GroupCpu {
-                    DWORD LogicalId = 0xFFFFFFFFu; /* 0..63 within target group */
+                    DWORD LogicalId = 0xFFFFFFFFu;
                     DWORD CoreId = 0xFFFFFFFFu;
                     DWORD NumaNode = 0xFFFFFFFFu;
                     DWORD L2CacheId = 0xFFFFFFFFu;
                     DWORD L3CacheId = 0xFFFFFFFFu;
-                    BYTE EfficiencyClass = 0;
+                    BYTE  EfficiencyClass = 0;
+                    bool  IsPrimarySmt = false;
                 };
 
                 GroupCpu group_cpus[64]{};
@@ -3604,31 +3744,30 @@ public:
                 size_t offset = 0;
 
                 while (offset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX) <= len) {
-                    auto* ptr = reinterpret_cast<PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(topo.data() + offset);
+                    auto* ptr = reinterpret_cast<PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(
+                        reinterpret_cast<BYTE*>(topo_ptr) + offset
+                    );
 
-                    constexpr size_t base_header_size = sizeof(LOGICAL_PROCESSOR_RELATIONSHIP) + sizeof(DWORD);
-                    if (ptr->Size < base_header_size || offset + ptr->Size > len) {
+                    if (ptr->Size < sizeof(LOGICAL_PROCESSOR_RELATIONSHIP) + sizeof(DWORD) || offset + ptr->Size > len) {
                         return {};
                     }
 
                     switch (ptr->Relationship) {
                     case RelationProcessorCore: {
-                        const size_t expected_size = offsetof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX, Processor.GroupMask) + (ptr->Processor.GroupCount * sizeof(GROUP_AFFINITY));
-                        if (ptr->Size < expected_size) {
-                            return {};
-                        }
-
                         const DWORD core_id = core_count++;
                         const BYTE efficiency = ptr->Processor.EfficiencyClass;
 
                         for (DWORD g = 0; g < ptr->Processor.GroupCount; ++g) {
                             if (ptr->Processor.GroupMask[g].Group == target_group) {
                                 const KAFFINITY mask = ptr->Processor.GroupMask[g].Mask;
+                                bool first_smt = true;
                                 for (DWORD bit = 0; bit < 64; ++bit) {
                                     if (mask & (1ull << bit)) {
                                         if (group_cpus[bit].LogicalId != 0xFFFFFFFFu) {
                                             group_cpus[bit].CoreId = core_id;
                                             group_cpus[bit].EfficiencyClass = efficiency;
+                                            group_cpus[bit].IsPrimarySmt = first_smt;
+                                            first_smt = false;
                                         }
                                     }
                                 }
@@ -3639,12 +3778,19 @@ public:
 
                     case RelationNumaNode: {
                         const DWORD node_id = ptr->NumaNode.NodeNumber;
-                        if (ptr->NumaNode.GroupMask.Group == target_group) {
-                            const KAFFINITY mask = ptr->NumaNode.GroupMask.Mask;
-                            for (DWORD bit = 0; bit < 64; ++bit) {
-                                if (mask & (1ull << bit)) {
-                                    if (group_cpus[bit].LogicalId != 0xFFFFFFFFu) {
-                                        group_cpus[bit].NumaNode = node_id;
+                        const WORD g_count = (ptr->NumaNode.GroupCount > 0) ? ptr->NumaNode.GroupCount : 1;
+                        for (WORD g = 0; g < g_count; ++g) {
+                            const GROUP_AFFINITY& g_aff = (ptr->NumaNode.GroupCount > 1)
+                                ? ptr->NumaNode.GroupMasks[g]
+                                : ptr->NumaNode.GroupMask;
+
+                            if (g_aff.Group == target_group) {
+                                const KAFFINITY mask = g_aff.Mask;
+                                for (DWORD bit = 0; bit < 64; ++bit) {
+                                    if (mask & (1ull << bit)) {
+                                        if (group_cpus[bit].LogicalId != 0xFFFFFFFFu) {
+                                            group_cpus[bit].NumaNode = node_id;
+                                        }
                                     }
                                 }
                             }
@@ -3653,16 +3799,10 @@ public:
                     }
 
                     case RelationCache: {
-                        const size_t expected_size = offsetof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX, Cache.GroupMasks) + (ptr->Cache.GroupCount * sizeof(GROUP_AFFINITY));
-                        if (ptr->Size < expected_size) {
-                            return {};
-                        }
-
-                        const WORD group_count_cache = ptr->Cache.GroupCount;
+                        const WORD group_count_cache = (ptr->Cache.GroupCount > 0) ? ptr->Cache.GroupCount : 1;
                         const DWORD cache_id = cache_count++;
 
                         for (WORD g = 0; g < group_count_cache; ++g) {
-                            /* Read and check all GroupMasks entries, supporting multi-group caches */
                             const GROUP_AFFINITY& g_aff = ptr->Cache.GroupMasks[g];
                             if (g_aff.Group == target_group) {
                                 const KAFFINITY mask = g_aff.Mask;
@@ -3690,34 +3830,18 @@ public:
                     offset += ptr->Size;
                 }
 
-                /* Golden Rule 1: At least two physical cores must exist in the allowed process affinity */
-                bool seen_core[256]{};
-                DWORD physical_cores = 0;
+                /* Golden Rule 1: At least two physical cores must exist */
+                DWORD unique_cores[64]{};
+                DWORD unique_cores_count = 0;
+                DWORD core_to_primary_logical[64]{};
 
                 for (DWORD i = 0; i < active_cpu_count; ++i) {
                     const DWORD log = idxs[i];
                     const DWORD core = group_cpus[log].CoreId;
+
                     if (core == 0xFFFFFFFFu) {
                         return {};
                     }
-                    if (core < 256 && !seen_core[core]) {
-                        seen_core[core] = true;
-                        ++physical_cores;
-                    }
-                }
-
-                if (physical_cores < 2) {
-                    return {};
-                }
-
-                /* Golden Rule 2: Counter thread always in the middle available physical CPU (or 2nd core if exactly 2) */
-                DWORD unique_cores[256]{};
-                DWORD unique_cores_count = 0;
-                DWORD core_to_logical[256]{};
-
-                for (DWORD i = 0; i < active_cpu_count; ++i) {
-                    const DWORD log = idxs[i];
-                    const DWORD core = group_cpus[log].CoreId;
 
                     bool already_seen = false;
                     for (DWORD c = 0; c < unique_cores_count; ++c) {
@@ -3726,31 +3850,24 @@ public:
                             break;
                         }
                     }
-                    if (!already_seen) {
-                        if (unique_cores_count < 64) {
-                            unique_cores[unique_cores_count] = core;
-                            core_to_logical[unique_cores_count] = log;
-                            unique_cores_count++;
-                        }
-                        else {
-                            break;
-                        }
+
+                    if (!already_seen && unique_cores_count < 64) {
+                        unique_cores[unique_cores_count] = core;
+                        core_to_primary_logical[unique_cores_count] = log;
+                        unique_cores_count++;
                     }
                 }
 
                 if (unique_cores_count < 2) {
-                    return {};
+                    return {}; /* Single physical core(e.g. 1 core with SMT enabled) */
                 }
 
-                const DWORD counter_pos0 = (unique_cores_count == 2) ? 1u : (unique_cores_count / 2u);
-                if (counter_pos0 >= unique_cores_count) {
-                    return {};
-                }
-
-                const DWORD counter_logical = core_to_logical[counter_pos0];
+                /* Golden Rule 2: Counter thread always in middle physical core(or core index 1 if exactly 2 cores) */
+                const DWORD counter_pos = (unique_cores_count == 2) ? 1u : (unique_cores_count / 2u);
+                const DWORD counter_logical = core_to_primary_logical[counter_pos];
                 const auto& counter_cpu = group_cpus[counter_logical];
 
-                if (counter_cpu.CoreId == 0xFFFFFFFFu || counter_cpu.NumaNode == 0xFFFFFFFFu) {
+                if (counter_cpu.CoreId == 0xFFFFFFFFu) {
                     return {};
                 }
 
@@ -3761,18 +3878,17 @@ public:
                     return aff;
                 }
 
-                /* Silver Rule 2: Find performance-dominant type within the process affinity subset */
                 BYTE max_efficiency = 0;
                 for (DWORD i = 0; i < active_cpu_count; ++i) {
-                    const DWORD logical = idxs[i];
-                    if (group_cpus[logical].EfficiencyClass > max_efficiency) {
-                        max_efficiency = group_cpus[logical].EfficiencyClass;
+                    const DWORD log = idxs[i];
+                    if (group_cpus[log].EfficiencyClass > max_efficiency) {
+                        max_efficiency = group_cpus[log].EfficiencyClass;
                     }
                 }
 
-                auto is_edge = [&](DWORD logical) noexcept -> bool {
-                    return logical == idxs[0] || logical == idxs[active_cpu_count - 1];
-                };
+                const DWORD core0_id = group_cpus[idxs[0]].CoreId;
+                const DWORD first_idx = idxs[0];
+                const DWORD last_idx = idxs[active_cpu_count - 1];
 
                 DWORD best_logical = 0xFFFFFFFFu;
                 int best_score = (std::numeric_limits<int>::min)();
@@ -3785,44 +3901,49 @@ public:
 
                     const auto& cand_cpu = group_cpus[logical];
 
-                    /* Silver Rule 1: SMT Sibling Isolation */
+                    /* Golden Rule 3: Never share physical core with counter thread (exclude SMT siblings) */
                     if (cand_cpu.CoreId == counter_cpu.CoreId) {
                         continue;
                     }
 
                     int score = 0;
 
-                    /* Silver Rule 3: Same NUMA Node alignment */
+                    /* Silver Rule 1: Same NUMA Node alignment (avoids cross-socket interconnect latency) */
                     if (cand_cpu.NumaNode != 0xFFFFFFFFu && cand_cpu.NumaNode == counter_cpu.NumaNode) {
                         score += 1000;
                     }
 
-                    /* Silver Rule 3: Same L3 Cache Domain alignment */
+                    /* Silver Rule 1: Same L3 Cache Slice / CCD Domain (avoids AMD Infinity Fabric cross-CCD hops) */
                     if (cand_cpu.L3CacheId != 0xFFFFFFFFu && cand_cpu.L3CacheId == counter_cpu.L3CacheId) {
                         score += 500;
                     }
 
-                    /* Silver Rule 2: Performance Core (P-Core) Priority */
+                    /* Silver Rule 2: Performance Core priority */
                     if (cand_cpu.EfficiencyClass == max_efficiency) {
                         score += 800;
                     }
 
-                    /* Silver Rule 4: Shared L2 Cache Cluster Penalty (avoids shared E-core controllers) */
+                    /* Silver Rule 3: Shared L2 Cluster Penalty (avoids shared E-core 4-core cluster controllers) */
                     if (cand_cpu.L2CacheId != 0xFFFFFFFFu && cand_cpu.L2CacheId == counter_cpu.L2CacheId) {
                         score -= 800;
                     }
 
-                    /* Silver Rule 5: Same Core Type alignment. The counter can actually be in a E-Core and the trigger in a P-Core safely, that's why I put a lower score */
+                    /* Silver Rule 4: Same Core Type / DVFS Domain alignment */
                     if (cand_cpu.EfficiencyClass == counter_cpu.EfficiencyClass) {
                         score += 100;
                     }
 
-                    /* Silver Rule 6: Physical Proximity Penalty */
+                    /* Silver Rule 5: Primary SMT Thread Bonus */
+                    if (cand_cpu.IsPrimarySmt) {
+                        score += 20;
+                    }
+
+                    /* Silver Rule 6: Silicon Ring Bus distance penalty */
                     const int dist = static_cast<int>(logical) - static_cast<int>(counter_logical);
                     score -= std::abs(dist);
 
-                    /* Silver Rule 7: Edge Core Protection */
-                    if (is_edge(logical)) {
+                    /* Silver Rule 7: Edge logical cores & Physical Core 0 Interrupt/DPC noise penalty */
+                    if (logical == first_idx || logical == last_idx || cand_cpu.CoreId == core0_id) {
                         score -= 50;
                     }
 
@@ -3846,10 +3967,7 @@ public:
         };
 
         struct engine {
-            #if ((CLANG || GCC))
-                __attribute__((__target__("serialize")))
-            #endif
-                static VMAWARE_FORCE_INLINE void warmup_cpu(const bool serialize_available) noexcept {
+             VMAWARE_SERIALIZE static VMAWARE_FORCE_INLINE void warmup_cpu(const bool serialize_available) noexcept {
                 /* Signal Intel Speed Shift / AMD CPPC to force maximum non-AVX Turbo/P-state frequency transition */
                 u64 val = 0x5a5a5a5a5a5a5a5aULL;
                 for (u32 i = 0; i < 2'000'000; ++i) {
@@ -3871,7 +3989,7 @@ public:
                         std::atomic_signal_fence(std::memory_order_seq_cst);
                     }
                 }
-            }
+             }
 
             [[nodiscard]] static timer_tick_t calculate_latency(const std::vector<timer_tick_t>& samples_in) {
                 if (samples_in.empty()) {
@@ -3967,25 +4085,29 @@ public:
         static void get_function(const HMODULE module, const char* const VMAWARE_RESTRICT names[], void** const VMAWARE_RESTRICT functions, const size_t count, const bool cache_result = true) {
             VMAWARE_ASSUME(names != nullptr);
             VMAWARE_ASSUME(functions != nullptr);
+
             using func_map = std::unordered_map<std::string, void*>;
             static std::unordered_map<HMODULE, func_map> function_cache;
 
-            for (size_t i = 0; i < count; ++i) functions[i] = nullptr;
+            if (VMAWARE_UNLIKELY(!functions || !names || count == 0)) {
+                return;
+            }
+
+            std::memset(functions, 0, count * sizeof(void*));
+
             if (!module) {
                 return;
             }
 
             BYTE* base = reinterpret_cast<BYTE*>(module);
 
-            size_t module_size = 0;
-            {
-                MEMORY_BASIC_INFORMATION mbi = {};
-                if (VirtualQuery(base, &mbi, sizeof(mbi))) {
-                    module_size = static_cast<size_t>(mbi.RegionSize);
-                }
-                else {
-                    return;
-                }
+            size_t module_size = 0;        
+            MEMORY_BASIC_INFORMATION mbi = {};
+            if (VirtualQuery(base, &mbi, sizeof(mbi))) {
+                module_size = static_cast<size_t>(mbi.RegionSize);
+            }
+            else {
+                return;
             }
 
             auto valid_range = [&](size_t offset, size_t sz) noexcept -> bool {
@@ -4475,9 +4597,9 @@ public:
         }
 
         [[nodiscard]] static bool exists(const char* path) {
-        #if (VMA_CPP >= 17)
+        #if (VMAWARE_CPP >= 17)
             return std::filesystem::exists(path);
-        #elif (VMA_CPP >= 11)
+        #elif (VMAWARE_CPP >= 11)
             struct stat buffer;
             return (stat(path, &buffer) == 0);
         #endif
@@ -4519,7 +4641,7 @@ public:
         /* Wrapper for std::make_unique because it's not available for C++11 */
         template<typename T, typename... Args>
         [[nodiscard]] static std::unique_ptr<T> make_unique(Args&&... args) {
-        #if (VMA_CPP < 14)
+        #if (VMAWARE_CPP < 14)
             return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
         #else
             return std::make_unique<T>(std::forward<Args>(args)...);
@@ -4696,7 +4818,7 @@ public:
         }
 
         [[nodiscard]] static std::unique_ptr<std::string> sys_result(const char* cmd) {
-        #if (VMA_CPP < 14)
+        #if (VMAWARE_CPP < 14)
             VMAWARE_UNUSED(cmd);
             return util::make_unique<std::string>();
         #else
@@ -4737,26 +4859,34 @@ public:
         [[nodiscard]] static bool is_proc_running(const char* executable) {
         #if (LINUX)
             VMAWARE_ASSUME(executable != nullptr);
-            #if (VMA_CPP >= 17)
-            for (const auto& entry : std::filesystem::directory_iterator("/proc")) {
-                if (!entry.is_directory()) {
-                    continue;
-                }
-
-                const std::string filename = entry.path().filename().string();
-            #else
-            std::unique_ptr<DIR, decltype(&closedir)> dir(opendir("/proc"), closedir);
-            if (!dir) {
-                debug("util::is_proc_running: ", "failed to open /proc directory");
+            #if (VMAWARE_CPP >= 17)
+            std::error_code ec;
+            auto dir_iter = std::filesystem::directory_iterator("/proc", ec);
+            if (ec) {
                 return false;
             }
 
-            struct dirent* entry;
-            while ((entry = readdir(dir.get())) != nullptr) {
-                std::string filename(entry->d_name);
-                if (filename == "." || filename == "..") {
-                    continue;
+            try {
+                for (const auto& entry : dir_iter) {
+                    std::error_code file_ec;
+                    if (!entry.is_directory(file_ec)) {
+                        continue;
+                    }
+
+                    const std::string filename = entry.path().filename().string();
+            #else
+                std::unique_ptr<DIR, decltype(&closedir)> dir(opendir("/proc"), closedir);
+                if (!dir) {
+                    debug("util::is_proc_running: ", "failed to open /proc directory");
+                    return false;
                 }
+
+                struct dirent* entry;
+                while ((entry = readdir(dir.get())) != nullptr) {
+                    std::string filename(entry->d_name);
+                    if (filename == "." || filename == "..") {
+                        continue;
+                    }
             #endif
                 if (!string::is_numeric(filename)) {
                     continue;
@@ -4800,11 +4930,15 @@ public:
                 return true;
             }
 
+        #if (VMAWARE_CPP >= 17)
+            } catch (...) {}
+        #endif
+
             return false;
         #else
             VMAWARE_UNUSED(executable);
             return false;
-        #endif
+        #endif  
         }
 
 
@@ -5119,7 +5253,7 @@ public:
                         break;
                     }
                     const size_t first_event_size = static_cast<size_t>(32) + first_event->event_data_size;
-                    const bool crypto_agile = (first_event->event_data_size >= 16 && memcmp(first_event->event_data, "Spec ID Event03", 15) == 0);
+                    const bool crypto_agile = (first_event->event_data_size >= 16 && std::memcmp(first_event->event_data, "Spec ID Event03", 15) == 0);
 
                     struct alg_size_pair {
                         u16 alg_id;
@@ -5228,7 +5362,11 @@ public:
 
                             size_t temp = offset + 12;
                             bool alg_error = false;
-                            for (u32 i = 0; i < digest_count && temp + 2 <= log_size; ++i) {
+                            for (u32 i = 0; i < digest_count; ++i) {
+                                if (log_size - temp < 2) {
+                                    alg_error = true;
+                                    break;
+                                }
                                 const u16 alg_id = *reinterpret_cast<const u16*>(log_buffer + temp);
                                 u16 digest_size = 0;
                                 bool alg_found = false;
@@ -5240,6 +5378,10 @@ public:
                                     }
                                 }
                                 if (!alg_found || digest_size == 0) {
+                                    alg_error = true;
+                                    break;
+                                }
+                                if (log_size - temp - 2 < digest_size) {
                                     alg_error = true;
                                     break;
                                 }
@@ -5580,18 +5722,43 @@ public:
                 return supported;
             }
 
+            /* Table generator for CRC32-C */
+            struct crc32c_table {
+                u32 table[256];
+                crc32c_table() noexcept {
+                    for (u32 i = 0; i < 256; ++i) {
+                        u32 c = i;
+                        for (int j = 0; j < 8; ++j) {
+                            c = (c >> 1) ^ ((c & 1) ? 0x82F63B78u : 0);
+                        }
+                        table[i] = c;
+                    }
+                }
+            };
+
             /* Software fallback CRC32-C (Castagnoli) of a block of memory */
             static u32 crc32c_sw(u32 crc, const void* VMAWARE_RESTRICT data, const size_t len) noexcept {
-                if (len > 0) {
-                    VMAWARE_ASSUME(data != nullptr);
+                if (VMAWARE_UNLIKELY(!data || len == 0)) {
+                    return crc;
                 }
-                const u8* ptr = reinterpret_cast<const u8*>(data);
 
-                for (size_t i = 0; i < len; ++i) {
-                    crc ^= ptr[i];
-                    for (int j = 0; j < 8; ++j) {
-                        crc = (crc >> 1) ^ ((crc & 1) ? 0x82F63B78u : 0);
-                    }
+                static const crc32c_table instance;
+                const u32* const table = instance.table;
+                const u8* const ptr = static_cast<const u8*>(data);
+
+                size_t i = 0;
+
+                while (i + 4 <= len) {
+                    crc = (crc >> 8) ^ table[(crc ^ ptr[i]) & 0xFF];
+                    crc = (crc >> 8) ^ table[(crc ^ ptr[i + 1]) & 0xFF];
+                    crc = (crc >> 8) ^ table[(crc ^ ptr[i + 2]) & 0xFF];
+                    crc = (crc >> 8) ^ table[(crc ^ ptr[i + 3]) & 0xFF];
+                    i += 4;
+                }
+
+                while (i < len) {
+                    crc = (crc >> 8) ^ table[(crc ^ ptr[i]) & 0xFF];
+                    ++i;
                 }
 
                 return crc;
@@ -5790,7 +5957,6 @@ public:
             if (active_brands.size() > 1) {
                 remove(brand_enum::HYPERV_ROOT);
                 remove(brand_enum::NULL_BRAND);
-                remove(brand_enum::INVALID);
             }
 
             /* If filtering emptied the vector, fall back to NULL_BRAND */
@@ -5807,52 +5973,52 @@ public:
             struct rule {
                 brand_enum a;
                 brand_enum b;
-                brand_enum c; /* brand_enum::INVALID if unused (double merge) */
+                brand_enum c; /* brand_enum::NULL_BRAND if unused (double merge) */
                 brand_enum result;
             };
 
             static constexpr rule merge_rules[] = {
                 /* Double merges */
-                { brand_enum::VPC, brand_enum::HYPERV, brand_enum::INVALID, brand_enum::HYPERV_VPC },
+                { brand_enum::VPC, brand_enum::HYPERV, brand_enum::NULL_BRAND, brand_enum::HYPERV_VPC },
 
-                { brand_enum::AZURE_HYPERV, brand_enum::HYPERV, brand_enum::INVALID, brand_enum::AZURE_HYPERV },
-                { brand_enum::AZURE_HYPERV, brand_enum::VPC, brand_enum::INVALID, brand_enum::AZURE_HYPERV },
-                { brand_enum::AZURE_HYPERV, brand_enum::HYPERV_VPC, brand_enum::INVALID, brand_enum::AZURE_HYPERV },
+                { brand_enum::AZURE_HYPERV, brand_enum::HYPERV, brand_enum::NULL_BRAND, brand_enum::AZURE_HYPERV },
+                { brand_enum::AZURE_HYPERV, brand_enum::VPC, brand_enum::NULL_BRAND, brand_enum::AZURE_HYPERV },
+                { brand_enum::AZURE_HYPERV, brand_enum::HYPERV_VPC, brand_enum::NULL_BRAND, brand_enum::AZURE_HYPERV },
 
-                { brand_enum::QEMU, brand_enum::KVM, brand_enum::INVALID, brand_enum::QEMU_KVM },
-                { brand_enum::KVM, brand_enum::HYPERV, brand_enum::INVALID, brand_enum::KVM_HYPERV },
-                { brand_enum::QEMU, brand_enum::HYPERV, brand_enum::INVALID, brand_enum::QEMU_KVM_HYPERV },
-                { brand_enum::QEMU_KVM, brand_enum::HYPERV, brand_enum::INVALID, brand_enum::QEMU_KVM_HYPERV },
+                { brand_enum::QEMU, brand_enum::KVM, brand_enum::NULL_BRAND, brand_enum::QEMU_KVM },
+                { brand_enum::KVM, brand_enum::HYPERV, brand_enum::NULL_BRAND, brand_enum::KVM_HYPERV },
+                { brand_enum::QEMU, brand_enum::HYPERV, brand_enum::NULL_BRAND, brand_enum::QEMU_KVM_HYPERV },
+                { brand_enum::QEMU_KVM, brand_enum::HYPERV, brand_enum::NULL_BRAND, brand_enum::QEMU_KVM_HYPERV },
 
-                { brand_enum::KVM, brand_enum::HYPERV_VPC, brand_enum::INVALID, brand_enum::KVM_HYPERV },
-                { brand_enum::QEMU, brand_enum::HYPERV_VPC, brand_enum::INVALID, brand_enum::QEMU_KVM_HYPERV },
-                { brand_enum::QEMU_KVM, brand_enum::HYPERV_VPC, brand_enum::INVALID, brand_enum::QEMU_KVM_HYPERV },
+                { brand_enum::KVM, brand_enum::HYPERV_VPC, brand_enum::NULL_BRAND, brand_enum::KVM_HYPERV },
+                { brand_enum::QEMU, brand_enum::HYPERV_VPC, brand_enum::NULL_BRAND, brand_enum::QEMU_KVM_HYPERV },
+                { brand_enum::QEMU_KVM, brand_enum::HYPERV_VPC, brand_enum::NULL_BRAND, brand_enum::QEMU_KVM_HYPERV },
 
-                { brand_enum::KVM, brand_enum::KVM_HYPERV, brand_enum::INVALID, brand_enum::KVM_HYPERV },
-                { brand_enum::QEMU, brand_enum::KVM_HYPERV, brand_enum::INVALID, brand_enum::QEMU_KVM_HYPERV },
-                { brand_enum::QEMU_KVM, brand_enum::KVM_HYPERV, brand_enum::INVALID, brand_enum::QEMU_KVM_HYPERV },
+                { brand_enum::KVM, brand_enum::KVM_HYPERV, brand_enum::NULL_BRAND, brand_enum::KVM_HYPERV },
+                { brand_enum::QEMU, brand_enum::KVM_HYPERV, brand_enum::NULL_BRAND, brand_enum::QEMU_KVM_HYPERV },
+                { brand_enum::QEMU_KVM, brand_enum::KVM_HYPERV, brand_enum::NULL_BRAND, brand_enum::QEMU_KVM_HYPERV },
 
-                { brand_enum::HYPERV_VPC, brand_enum::KVM_HYPERV, brand_enum::INVALID, brand_enum::KVM_HYPERV },
-                { brand_enum::HYPERV, brand_enum::KVM_HYPERV, brand_enum::INVALID, brand_enum::KVM_HYPERV },
-                { brand_enum::HYPERV_VPC, brand_enum::QEMU_KVM_HYPERV, brand_enum::INVALID, brand_enum::QEMU_KVM_HYPERV },
-                { brand_enum::HYPERV, brand_enum::QEMU_KVM_HYPERV, brand_enum::INVALID, brand_enum::QEMU_KVM_HYPERV },
+                { brand_enum::HYPERV_VPC, brand_enum::KVM_HYPERV, brand_enum::NULL_BRAND, brand_enum::KVM_HYPERV },
+                { brand_enum::HYPERV, brand_enum::KVM_HYPERV, brand_enum::NULL_BRAND, brand_enum::KVM_HYPERV },
+                { brand_enum::HYPERV_VPC, brand_enum::QEMU_KVM_HYPERV, brand_enum::NULL_BRAND, brand_enum::QEMU_KVM_HYPERV },
+                { brand_enum::HYPERV, brand_enum::QEMU_KVM_HYPERV, brand_enum::NULL_BRAND, brand_enum::QEMU_KVM_HYPERV },
 
-                /* Triple merge */
+                /* Triple merge (retains third brand) */
                 { brand_enum::QEMU, brand_enum::KVM, brand_enum::KVM_HYPERV, brand_enum::QEMU_KVM_HYPERV },
 
                 /* VMware merges */
-                { brand_enum::VMWARE, brand_enum::VMWARE_FUSION, brand_enum::INVALID, brand_enum::VMWARE_FUSION },
-                { brand_enum::VMWARE, brand_enum::VMWARE_EXPRESS, brand_enum::INVALID, brand_enum::VMWARE_EXPRESS },
-                { brand_enum::VMWARE, brand_enum::VMWARE_ESX, brand_enum::INVALID, brand_enum::VMWARE_ESX },
-                { brand_enum::VMWARE, brand_enum::VMWARE_GSX, brand_enum::INVALID, brand_enum::VMWARE_GSX },
-                { brand_enum::VMWARE, brand_enum::VMWARE_WORKSTATION, brand_enum::INVALID, brand_enum::VMWARE_WORKSTATION },
+                { brand_enum::VMWARE, brand_enum::VMWARE_FUSION, brand_enum::NULL_BRAND, brand_enum::VMWARE_FUSION },
+                { brand_enum::VMWARE, brand_enum::VMWARE_EXPRESS, brand_enum::NULL_BRAND, brand_enum::VMWARE_EXPRESS },
+                { brand_enum::VMWARE, brand_enum::VMWARE_ESX, brand_enum::NULL_BRAND, brand_enum::VMWARE_ESX },
+                { brand_enum::VMWARE, brand_enum::VMWARE_GSX, brand_enum::NULL_BRAND, brand_enum::VMWARE_GSX },
+                { brand_enum::VMWARE, brand_enum::VMWARE_WORKSTATION, brand_enum::NULL_BRAND, brand_enum::VMWARE_WORKSTATION },
 
-                { brand_enum::VMWARE_HARD, brand_enum::VMWARE, brand_enum::INVALID, brand_enum::VMWARE_HARD },
-                { brand_enum::VMWARE_HARD, brand_enum::VMWARE_FUSION, brand_enum::INVALID, brand_enum::VMWARE_HARD },
-                { brand_enum::VMWARE_HARD, brand_enum::VMWARE_EXPRESS, brand_enum::INVALID, brand_enum::VMWARE_HARD },
-                { brand_enum::VMWARE_HARD, brand_enum::VMWARE_ESX, brand_enum::INVALID, brand_enum::VMWARE_HARD },
-                { brand_enum::VMWARE_HARD, brand_enum::VMWARE_GSX, brand_enum::INVALID, brand_enum::VMWARE_HARD },
-                { brand_enum::VMWARE_HARD, brand_enum::VMWARE_WORKSTATION, brand_enum::INVALID, brand_enum::VMWARE_HARD }
+                { brand_enum::VMWARE_HARD, brand_enum::VMWARE, brand_enum::NULL_BRAND, brand_enum::VMWARE_HARD },
+                { brand_enum::VMWARE_HARD, brand_enum::VMWARE_FUSION, brand_enum::NULL_BRAND, brand_enum::VMWARE_HARD },
+                { brand_enum::VMWARE_HARD, brand_enum::VMWARE_EXPRESS, brand_enum::NULL_BRAND, brand_enum::VMWARE_HARD },
+                { brand_enum::VMWARE_HARD, brand_enum::VMWARE_ESX, brand_enum::NULL_BRAND, brand_enum::VMWARE_HARD },
+                { brand_enum::VMWARE_HARD, brand_enum::VMWARE_GSX, brand_enum::NULL_BRAND, brand_enum::VMWARE_HARD },
+                { brand_enum::VMWARE_HARD, brand_enum::VMWARE_WORKSTATION, brand_enum::NULL_BRAND, brand_enum::VMWARE_HARD }
             };
 
             std::bitset<MAX_BRANDS> current_active = brand_hits;
@@ -5871,12 +6037,13 @@ public:
 
                 const bool a_hit = brand_hits.test(a_idx);
                 const bool b_hit = brand_hits.test(b_idx);
-                const bool c_hit = (rule.c == brand_enum::INVALID) || brand_hits.test(c_idx);
+
+                const bool c_hit = (rule.c == brand_enum::NULL_BRAND) || brand_hits.test(c_idx);
 
                 if (a_hit && b_hit && c_hit) {
                     current_active.reset(a_idx);
                     current_active.reset(b_idx);
-                    if (rule.c != brand_enum::INVALID) {
+                    if (rule.c != brand_enum::NULL_BRAND) {
                         current_active.reset(c_idx);
                     }
                     current_active.set(res_idx);
@@ -5907,7 +6074,6 @@ public:
 
         static VMAWARE_CONSTEXPR const char* brand_enum_to_string(const brand_enum brand) noexcept {
             switch (brand) {
-                case brand_enum::INVALID:               return "Invalid";
                 case brand_enum::VBOX:                  return VM::brands::VBOX;
                 case brand_enum::VMWARE:                return VM::brands::VMWARE;
                 case brand_enum::VMWARE_EXPRESS:        return VM::brands::VMWARE_EXPRESS;
@@ -6437,7 +6603,7 @@ public:
         #endif
         };
 
-    #if (WINDOWS && defined __VMAWARE_DEBUG__)
+    #if (WINDOWS && defined VMAWARE_DEBUG)
         const char* manufacturer = "";
         const char* device_model = "";
         if (util::get_manufacturer_model(&manufacturer, &device_model)) {
@@ -6749,15 +6915,11 @@ public:
 
 
     /**
-     * @brief Check for hypervisor overhead by measuring instruction and memory latency
+     * @brief Check for hypervisor overhead by measuring instruction and exception latency
      * @category Windows, x86
      * @implements VM::TIMER
      */
-    [[nodiscard]] static bool timer() 
-    #if ((CLANG || GCC))
-        __attribute__((__target__("serialize")))
-    #endif
-    {
+    [[nodiscard]] static bool timer() VMAWARE_SERIALIZE {
     #if (x86 && WINDOWS)
         if (util::is_x86_process_on_arm()) {
             debug("TIMER: Running inside a binary translation layer");
@@ -6766,14 +6928,8 @@ public:
 
         /* Calculation of minimum threshold for instrution latency */
         double threshold = 2.5;
-        bool check_nested_hypervisors = false;
-        #if (x86_32)
-            VMAWARE_UNUSED(check_nested_hypervisors);
-        #endif
-
         if (util::hyper_x() == HYPERV_HOST) {
             debug("TIMER: Hyper-V detected, running nested checks");
-            check_nested_hypervisors = true;
             threshold = 15.0;
         }
 
@@ -6843,230 +6999,12 @@ public:
             }
         }
 
-    #if (x86_64) /* WHP stuff not available for x86_32 */
-        using whv_create_partition_fn = HRESULT(__stdcall*)(WHV_PARTITION_HANDLE*);
-        using whv_set_partition_property_fn = HRESULT(__stdcall*)(WHV_PARTITION_HANDLE, WHV_PARTITION_PROPERTY_CODE, const void*, UINT32);
-        using whv_setup_partition_fn = HRESULT(__stdcall*)(WHV_PARTITION_HANDLE);
-        using whv_create_virtual_processor_fn = HRESULT(__stdcall*)(WHV_PARTITION_HANDLE, UINT32, UINT32);
-        using whv_map_gpa_range_fn = HRESULT(__stdcall*)(WHV_PARTITION_HANDLE, void*, WHV_GUEST_PHYSICAL_ADDRESS, UINT64, WHV_MAP_GPA_RANGE_FLAGS);
-        using whv_set_virtual_processor_registers_fn = HRESULT(__stdcall*)(WHV_PARTITION_HANDLE, UINT32, const WHV_REGISTER_NAME*, UINT32, const WHV_REGISTER_VALUE*);
-        using whv_run_virtual_processor_fn = HRESULT(__stdcall*)(WHV_PARTITION_HANDLE, UINT32, void*, UINT32);
-        using whv_delete_partition_fn = HRESULT(__stdcall*)(WHV_PARTITION_HANDLE);
-        using nt_allocate_virtual_memory_fn = NTSTATUS(__stdcall*)(HANDLE, PVOID*, ULONG_PTR, PSIZE_T, ULONG, ULONG);
-        using nt_free_virtual_memory_fn = NTSTATUS(__stdcall*)(HANDLE, PVOID*, PSIZE_T, ULONG);
-        using nt_query_system_time_fn = NTSTATUS(__stdcall*)(PLARGE_INTEGER);
-
-        whv_create_partition_fn whv_create_partition = nullptr;
-        whv_set_partition_property_fn whv_set_partition_property = nullptr;
-        whv_setup_partition_fn whv_setup_partition = nullptr;
-        whv_create_virtual_processor_fn whv_create_virtual_processor = nullptr;
-        whv_map_gpa_range_fn whv_map_gpa_range = nullptr;
-        whv_set_virtual_processor_registers_fn whv_set_virtual_processor_registers = nullptr;
-        whv_run_virtual_processor_fn whv_run_virtual_processor = nullptr;
-        whv_delete_partition_fn whv_delete_partition = nullptr;
-        nt_allocate_virtual_memory_fn nt_allocate_virtual_memory = nullptr;
-        nt_free_virtual_memory_fn nt_free_virtual_memory = nullptr;
-        nt_query_system_time_fn nt_query_system_time = nullptr;
-
-        const UINT32 reg_count = 12;
-        PVOID mem = nullptr;
-        HMODULE winhv_dll = nullptr;
-        HMODULE ntdll_dll = nullptr;
-        WHV_PARTITION_HANDLE p = nullptr;
-        WHV_REGISTER_NAME names[reg_count]{};
-        WHV_REGISTER_VALUE values[reg_count]{};
-
-        if (check_nested_hypervisors) {
-            winhv_dll = LoadLibraryExW(L"WinHvPlatform.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
-            ntdll_dll = memory::get_module(true);
-
-            if (!winhv_dll || !ntdll_dll) {
-                debug("TIMER: Not all modules required to run the nested check could be found");
-                check_nested_hypervisors = false;
-            }
-            else {
-                constexpr const char* whv_function_names[] = {
-                    "WHvCreatePartition",
-                    "WHvSetPartitionProperty",
-                    "WHvSetupPartition",
-                    "WHvCreateVirtualProcessor",
-                    "WHvMapGpaRange",
-                    "WHvSetVirtualProcessorRegisters",
-                    "WHvRunVirtualProcessor",
-                    "WHvDeletePartition"  
-                };
-                void* whv_functions[ARRAYSIZE(whv_function_names)] = {};
-                memory::get_function(winhv_dll, whv_function_names, whv_functions, ARRAYSIZE(whv_function_names), false);
-
-                constexpr const char* nt_function_names[] = {
-                    "NtAllocateVirtualMemory",
-                    "NtFreeVirtualMemory",
-                    "NtQuerySystemTime"
-                };
-                void* nt_functions[ARRAYSIZE(nt_function_names)] = {};
-                memory::get_function(ntdll_dll, nt_function_names, nt_functions, ARRAYSIZE(nt_function_names));
-
-                whv_create_partition = reinterpret_cast<whv_create_partition_fn>(whv_functions[0]);
-                whv_set_partition_property = reinterpret_cast<whv_set_partition_property_fn>(whv_functions[1]);
-                whv_setup_partition = reinterpret_cast<whv_setup_partition_fn>(whv_functions[2]);
-                whv_create_virtual_processor = reinterpret_cast<whv_create_virtual_processor_fn>(whv_functions[3]);
-                whv_map_gpa_range = reinterpret_cast<whv_map_gpa_range_fn>(whv_functions[4]);
-                whv_set_virtual_processor_registers = reinterpret_cast<whv_set_virtual_processor_registers_fn>(whv_functions[5]);
-                whv_run_virtual_processor = reinterpret_cast<whv_run_virtual_processor_fn>(whv_functions[6]);
-                whv_delete_partition = reinterpret_cast<whv_delete_partition_fn>(whv_functions[7]);
-
-                nt_allocate_virtual_memory = reinterpret_cast<nt_allocate_virtual_memory_fn>(nt_functions[0]);
-                nt_free_virtual_memory = reinterpret_cast<nt_free_virtual_memory_fn>(nt_functions[1]);
-                nt_query_system_time = reinterpret_cast<nt_query_system_time_fn>(nt_functions[2]);
-
-                if (!whv_create_partition || !whv_set_partition_property || !whv_setup_partition ||
-                    !whv_create_virtual_processor || !whv_map_gpa_range || !whv_set_virtual_processor_registers ||
-                    !whv_run_virtual_processor || !whv_delete_partition || !nt_allocate_virtual_memory ||
-                    !nt_free_virtual_memory || !nt_query_system_time)
-                {
-                    if (winhv_dll) {
-                        FreeLibrary(winhv_dll);
-                    }
-                    winhv_dll = nullptr;
-                    debug("TIMER: Not all modules required to run the nested check could be found");
-                    check_nested_hypervisors = false;
-                }
-            }
-
-            bool partition_ready = false;
-            HRESULT hr = S_OK;
-
-            if (!whv_create_partition || FAILED(hr = whv_create_partition(&p))) {
-                debug("TIMER: WHvCreatePartition failed with 0x%08X", hr);
-            }
-            else {
-                UINT32 cpu_count = 1;
-                if (whv_set_partition_property) {
-                    hr = whv_set_partition_property(p, WHvPartitionPropertyCodeProcessorCount, &cpu_count, sizeof(cpu_count));
-                    if (FAILED(hr)) {
-                        debug("TIMER: WHvSetPartitionProperty failed with 0x%08X", hr);
-                    }
-                }
-
-                if (SUCCEEDED(hr) && whv_setup_partition) {
-                    hr = whv_setup_partition(p);
-                    if (FAILED(hr)) {
-                        debug("TIMER: WHvSetupPartition failed with 0x%08X", hr);
-                    }
-                    else if (whv_create_virtual_processor) {
-                        hr = whv_create_virtual_processor(p, 0, 0);
-                        if (FAILED(hr)) {
-                            debug("TIMER: WHvCreateVirtualProcessor failed with 0x%08X", hr);
-                        }
-                        else {
-                            mem = nullptr;
-                            SIZE_T region_size = 0x2000;
-                            NTSTATUS status = static_cast<NTSTATUS>(0xC0000001L);
-
-                            if (nt_allocate_virtual_memory) {
-                                status = nt_allocate_virtual_memory(
-                                    current_process, 
-                                    &mem,
-                                    0,
-                                    &region_size,
-                                    MEM_RESERVE | MEM_COMMIT,
-                                    PAGE_EXECUTE_READWRITE 
-                                );
-                            }
-
-                            if (NT_SUCCESS(status)) {
-                                constexpr auto flags = static_cast<WHV_MAP_GPA_RANGE_FLAGS>(7);
-                                if (whv_map_gpa_range) {
-                                    hr = whv_map_gpa_range(p, mem, 0, 0x2000, flags);
-                                    if (SUCCEEDED(hr)) {
-                                        partition_ready = true;
-                                    }
-                                    else {
-                                        debug("TIMER: WHvMapGpaRange failed with 0x%08X", hr);
-                                    }
-                                }
-                            }
-                            else {
-                                debug("TIMER: NtAllocateVirtualMemory failed with 0x%08X", status);
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (!partition_ready) {
-                if (p && whv_delete_partition) {
-                    whv_delete_partition(p);
-                    p = nullptr;
-                }
-                if (winhv_dll) {
-                    FreeLibrary(winhv_dll);
-                    winhv_dll = nullptr;
-                }
-                check_nested_hypervisors = false;
-            }
-            else {
-                /* It uses a 16-bit address offset of 0x3000 (little-endian 00 30). Since VMAware's dsSeg.Base is 0, the physical address (GPA) it attempts to access is DS.Base + 0x3000 = 0x3000 */
-                const u8 code[] = { 0xA0, 0x00, 0x30 }; /* Because the CS descriptor specifies a 16-bit default size, the processor decodes 0xA0 as MOV AL, [0x3000] */
-                memcpy(reinterpret_cast<u8*>(mem) + 0x1000, code, sizeof(code));
-
-                WHV_X64_SEGMENT_REGISTER cs_seg{};
-                cs_seg.Base = 0;
-                cs_seg.Limit = 0xFFFF;
-                cs_seg.Selector = 0;
-                /*
-                 * 0x9B here translates to SegmentType = 0xB (Execute/Read, accessed code segment)
-                 * NonSystemSegment = 1, DescriptorPrivilegeLevel = 0 (DPL matches real mode CPL of 0), and Present = 1,
-                 * the Default (D) bit (bit 14 of the attributes union) is left at 0 telling the hardware that this is a 16-bit segment
-                 */
-                cs_seg.Attributes = 0x9B;
-
-                WHV_X64_SEGMENT_REGISTER ds_seg{};
-                ds_seg.Base = 0;
-                ds_seg.Limit = 0xFFFF;
-                ds_seg.Selector = 0;
-                ds_seg.Attributes = 0x93; /* This translates to SegmentType = 0x3 (Read/Write, accessed data segment), which is the standard configuration for real-mode data segments */
-
-                names[0] = WHvX64RegisterCr0;
-                names[1] = WHvX64RegisterCr3;
-                names[2] = WHvX64RegisterCr4;
-                names[3] = WHvX64RegisterEfer;
-                names[4] = WHvX64RegisterRip;
-                names[5] = WHvX64RegisterRflags;
-                names[6] = WHvX64RegisterCs;
-                names[7] = WHvX64RegisterDs;
-                names[8] = WHvX64RegisterEs;
-                names[9] = WHvX64RegisterSs;
-                names[10] = WHvX64RegisterFs;
-                names[11] = WHvX64RegisterGs;
-
-                memset(values, 0, sizeof(values));
-                /* 
-                 * In CR0, Bit 0 (PE - Protection Enable) is set to 0 and Bit 31 (PG - Paging) too, this makes VMAware's guest VP L2 run in real-address mode
-                 * The other set bits (CD, NW, and ET) match the standard architectural power-on reset state of x86 processors
-                 */
-                values[0].Reg64 = 0x60000010;
-                values[1].Reg64 = 0x0;
-                values[2].Reg64 = 0x0;
-                values[3].Reg64 = 0x0;
-                values[4].Reg64 = 0x1000;
-                values[5].Reg64 = 0x2;
-                values[6].Segment = cs_seg;
-                values[7].Segment = ds_seg;
-                values[8].Segment = ds_seg;
-                values[9].Segment = ds_seg;
-                values[10].Segment = ds_seg;
-                values[11].Segment = ds_seg;
-                /* Since paging is disabled, #PF exceptions are architecturally impossible to be triggered by VMAware, forcing always an unconditional NPF */
-            }
-        }
-    #endif  
-
+        /* Prepare threads for check */
+        debug("TIMER: CPU supports SERIALIZE: ", serialize_available);
         GROUP_AFFINITY old_affinity{};
-        SetThreadGroupAffinity(current_thread, &trigger_affinity, &old_affinity);
-
         const DWORD old_process_priority = GetPriorityClass(current_process);
         const int old_thread_priority = GetThreadPriority(current_thread);
+        SetThreadGroupAffinity(current_thread, &trigger_affinity, &old_affinity);
         SetPriorityClass(current_process, ABOVE_NORMAL_PRIORITY_CLASS); /* ABOVE_NORMAL_PRIORITY_CLASS + THREAD_PRIORITY_HIGHEST = 12 base priority */
         SetThreadPriority(current_thread, THREAD_PRIORITY_HIGHEST);
         SetThreadPriorityBoost(current_thread, TRUE); /* disable dynamic thread priority adjustments by Windows, not turbo boosts by the hardware itself */
@@ -7074,25 +7012,153 @@ public:
         VMAWARE_CONSTEXPR const u32 ct_seed = timer::config::get_seed();
         const size_t batch_size = timer::config::generate_batch_size(ct_seed);
 
+        const HMODULE ntdll = memory::get_module(true);
+        if (!ntdll) {
+            return false;
+        }
+
+        constexpr const char* function_names[] = {
+            "ZwRaiseException"
+        };
+        void* functions[ARRAYSIZE(function_names)] = {};
+        memory::get_function(ntdll, function_names, functions, ARRAYSIZE(function_names));
+
+        using zw_raise_exception_fn = NTSTATUS(__stdcall*)(PEXCEPTION_RECORD, PCONTEXT, BOOLEAN);
+        zw_raise_exception_fn zw_raise_exception = reinterpret_cast<zw_raise_exception_fn>(functions[0]);
+        if (!zw_raise_exception) {
+            return false;
+        }
+
         std::vector<timer::timer_tick_t> vm_samples(batch_size), ref_samples(batch_size); /* pre page-fault MMU, we won't warm-up cpuid samples for the P-states intentionally */
+        std::vector<timer::timer_tick_t> api_samples(batch_size), db_samples(batch_size);
+
         /* Lock the memory for the samples to prevent soft #PF during timing if permissions are enough */
         const bool vm_samples_locked = VirtualLock(vm_samples.data(), batch_size * sizeof(timer::timer_tick_t));
         const bool ref_samples_locked = VirtualLock(ref_samples.data(), batch_size * sizeof(timer::timer_tick_t));
+        const bool api_samples_locked = VirtualLock(api_samples.data(), batch_size * sizeof(timer::timer_tick_t));
+        const bool db_samples_locked = VirtualLock(db_samples.data(), batch_size * sizeof(timer::timer_tick_t));
 
         /* Independent multi-trial state initialization */
         constexpr int trials = 5;
         constexpr size_t local_max_attempts = 1000 * trials;
         timer::timer_tick_t best_cpuid_l = (std::numeric_limits<timer::timer_tick_t>::max)();
         timer::timer_tick_t best_ref_l = (std::numeric_limits<timer::timer_tick_t>::max)();
-    #if (x86_64)
-        timer::timer_tick_t best_npf_l = (std::numeric_limits<timer::timer_tick_t>::max)();
-        timer::timer_tick_t best_add_l = (std::numeric_limits<timer::timer_tick_t>::max)();
-        bool nested_bypass_detected = false;
-    #endif
+        timer::timer_tick_t best_api_l = (std::numeric_limits<timer::timer_tick_t>::max)();
+        timer::timer_tick_t best_db_l = (std::numeric_limits<timer::timer_tick_t>::max)();
+
+        /* To isolate the SEH frame from C++ unwinding scopes */
+        struct exception_handler {
+            static VMAWARE_NOINLINE void execute_db() noexcept {
+                __try {
+                #if (MSVC)
+                    const auto eflags = __readeflags();
+                    __writeeflags(eflags | 0x100);
+                    __nop();
+                #elif (x86_64)
+                    __asm__ volatile (
+                        "pushfq \n\t"
+                        "orq $0x100, (%%rsp) \n\t"
+                        "popfq \n\t"
+                        "nop \n\t"
+                        :
+                    :
+                        : "cc", "memory"
+                    );
+                    #else
+                    __asm__ volatile (
+                        "pushfl \n\t"
+                        "orl $0x100, (%%esp) \n\t"
+                        "popfl \n\t"
+                        "nop \n\t"
+                        :
+                    :
+                        : "cc", "memory"
+                    );
+                #endif
+                }
+                __except (
+                    GetExceptionCode() == EXCEPTION_SINGLE_STEP
+                    ? (GetExceptionInformation()->ContextRecord->EFlags &= ~0x100U, EXCEPTION_CONTINUE_EXECUTION)
+                    : EXCEPTION_CONTINUE_SEARCH
+                    ) {
+                }
+            }
+
+            /* decltype to resolve the local function pointer type without template keywords */
+            static VMAWARE_NO_CFG void nt_raise_exception(
+                decltype(zw_raise_exception) zw_raise,
+                EXCEPTION_RECORD* er,
+                CONTEXT* ctx,
+                volatile bool* flag
+            ) noexcept {
+                __try {
+                #if (x86_64)
+                    RtlCaptureContext(ctx);
+                #else
+                    /* On x86_32, RtlCaptureContext is unreliable under clang-cl with FPO */
+                    ctx->ContextFlags = CONTEXT_CONTROL;
+                    uintptr_t current_esp = 0;
+                    uintptr_t current_ebp = 0;
+                    uintptr_t current_eip = 0;
+                    u32 current_cs = 0;
+                    u32 current_ss = 0;
+                    u32 current_eflags = 0;
+
+                #if (MSVC) /* This matches clang-cl on purpose */
+                    __asm {
+                        mov current_esp, esp
+                        mov current_ebp, ebp
+
+                        xor eax, eax
+                        mov ax, cs
+                        mov current_cs, eax
+
+                        xor eax, eax
+                        mov ax, ss
+                        mov current_ss, eax
+
+                        call get_eip
+                        get_eip :
+                        pop eax
+                            mov current_eip, eax
+                    }
+                    current_eflags = static_cast<u32>(__readeflags());
+                #else
+                    __asm__ volatile(
+                        "movl %%esp, %0 \n\t"
+                        "movl %%ebp, %1 \n\t"
+                        "mov %%cs, %2 \n\t"
+                        "mov %%ss, %3 \n\t"
+                        "pushfl \n\t"
+                        "popl %4 \n\t"
+                        "call 1f \n\t"
+                        "1: \n\t"
+                        "popl %5 \n\t"
+                        : "=r"(current_esp), "=r"(current_ebp), "=r"(current_cs), "=r"(current_ss), "=r"(current_eflags), "=r"(current_eip)
+                    );
+                #endif
+
+                    ctx->Esp = current_esp;
+                    ctx->Ebp = current_ebp;
+                    ctx->Eip = current_eip;
+                    ctx->SegCs = current_cs;
+                    ctx->SegSs = current_ss;
+                    ctx->EFlags = current_eflags;
+                #endif
+                    * flag = true;
+                    zw_raise(er, ctx, 1);
+                }
+                __except (
+                    GetExceptionCode() == EXCEPTION_SINGLE_STEP
+                    ? EXCEPTION_EXECUTE_HANDLER
+                    : EXCEPTION_CONTINUE_SEARCH
+                    ) {
+                }
+            }
+        };
 
         std::thread t1(counter_thread);
         state.start_test.store(true, std::memory_order_release);
-        SleepEx(0, FALSE); /* end of setup phase, try to get fresh quantum and give time to counter thread */
 
         /* Cache and CPU scheduler warm-up won't affect anything in the measurement loop, so ramp up frequency/P-states to a high non-AVX Turbo/P-state without vmexits */
         timer::engine::warmup_cpu(serialize_available);
@@ -7239,108 +7305,82 @@ public:
                 }
             }
 
-            /* If Hyper-V is enabled, check if there's another hypervisor sitting on top of Hyper-V with an unconditional vmexit */
-        #if (x86_64)
-            if (check_nested_hypervisors) {
-                constexpr int sample_amount = 100;
-                std::vector<timer::timer_tick_t> npf_samples(sample_amount);
-                std::vector<timer::timer_tick_t> add_samples(sample_amount);
+            valid = 0;
+            invalid = 0;
 
-                const bool npf_locked = 
-                    VirtualLock(npf_samples.data(), sample_amount * sizeof(timer::timer_tick_t))
-                    &&
-                    VirtualLock(add_samples.data(), sample_amount * sizeof(timer::timer_tick_t));
+            /* 
+             * I choose #DB because it forces a L0 to L1 nested vmexit when Hyper-V is running
+             * L0 must sync the exception bitmap with L1 in order for this to receive pending events, as the CPU always jumps to the hv running on the metal
+             * VMCB/VMCS public dumps shows Hyper-V intercepts #DB, #AC and #MC
+             */
+            while (valid < batch_size && invalid < local_max_attempts) {
+                timer::timer_tick_t db_pre, db_post, api_pre, api_post, sync;
 
-                size_t npf_valid = 0;
-                LARGE_INTEGER system_time;
-                volatile timer::timer_tick_t* const nested_counter_ptr = &state.counter;
+                sync = *counter_ptr;
+                while (*counter_ptr == sync);
+                sync = *counter_ptr;
+                VMAWARE_PREFETCH(counter_ptr, _MM_HINT_T0);
+                while (*counter_ptr == sync);
 
-                for (size_t i = 0; i < sample_amount; ++i) {
-                    timer::timer_tick_t r_pre, r_post, v_pre, v_post, sync;
+                db_pre = *counter_ptr;
+                std::atomic_signal_fence(std::memory_order_acq_rel);
+                exception_handler::execute_db();
+                std::atomic_signal_fence(std::memory_order_acq_rel);
+                db_post = *counter_ptr;
 
-                    sync = *nested_counter_ptr;
-                    while (*nested_counter_ptr == sync);
-                    sync = *nested_counter_ptr;
-                    while (*nested_counter_ptr == sync);
+                sync = *counter_ptr;
+                while (*counter_ptr == sync);
+                sync = *counter_ptr;
+                VMAWARE_PREFETCH(counter_ptr, _MM_HINT_T0);
+                while (*counter_ptr == sync);
 
-                    r_pre = *nested_counter_ptr;
-                    std::atomic_signal_fence(std::memory_order_acq_rel);
-                    {
-                        for (size_t j = 0; j < 2256; j++) {
-                            nt_query_system_time(&system_time); /* one of the fastest syscalls */
-                        }
-                    }
-                    std::atomic_signal_fence(std::memory_order_acq_rel);
-                    r_post = *nested_counter_ptr;
+                volatile bool flag = false;
+                CONTEXT ctx{};
+                ctx.ContextFlags = CONTEXT_FULL;
 
-                    values[4].Reg64 = 0x1000;
-                    if (whv_set_virtual_processor_registers) {
-                        whv_set_virtual_processor_registers(p, 0, names, reg_count, values);
-                    }
-                    WHV_RUN_VP_EXIT_CONTEXT exit_ctx{};
+                EXCEPTION_RECORD er{};
+                er.ExceptionCode = EXCEPTION_SINGLE_STEP;
+                er.ExceptionFlags = 0;
 
-                    sync = *nested_counter_ptr;
-                    while (*nested_counter_ptr == sync);
-                    sync = *nested_counter_ptr;
-                    while (*nested_counter_ptr == sync);
+                api_pre = *counter_ptr;
+                std::atomic_signal_fence(std::memory_order_acq_rel);
+                exception_handler::nt_raise_exception(zw_raise_exception, &er, &ctx, &flag);
+                std::atomic_signal_fence(std::memory_order_acq_rel);
+                api_post = *counter_ptr;
 
-                    v_pre = *nested_counter_ptr;
-                    std::atomic_signal_fence(std::memory_order_seq_cst);
-                    /*
-                     * Since GPA 0x3000 is outside our mapped range (0 to 0x2000), CPU triggers an EPT/NPT violation (GPA fault) because it belongs to the second-level address translation
-                     * Nested page faults ALWAYS require L0 involvement to be handled, and VMAware can force L0 to synthethize a nested VMEXIT so it forwards the event to L1
-                     * This type of VMEXIT is the only VMEXIT that can be reached from L2 CPL3 in both AMD and Intel
-                     * WHP is just used to make the vCPU in 16-bit real mode and disable first-level address translation faults, and to not make EPT violations to be translated as a #VE
-                     */
-                    if (whv_run_virtual_processor) {
-                        whv_run_virtual_processor(p, 0, &exit_ctx, sizeof(exit_ctx));
-                    }
-                    std::atomic_signal_fence(std::memory_order_seq_cst);
-                    v_post = *nested_counter_ptr;
-
-                    if (v_post > v_pre && r_post > r_pre) {
-                        if (exit_ctx.ExitReason == WHvRunVpExitReasonMemoryAccess) {
-                            npf_samples[npf_valid] = v_post - v_pre;
-                            add_samples[npf_valid] = r_post - r_pre;
-                            npf_valid++;
-                        }
-                        else {
-                            debug("TIMER: Detected hypervisor faking exceptions for nested page faults");
-                            nested_bypass_detected = true;
-                            break;
-                        }                    
-                    }
-
-                    timer::engine::burn_random_cycles(ct_seed, v_post, r_post);
+                if (api_post > api_pre && db_post > db_pre) {
+                    api_samples[valid] = api_post - api_pre;
+                    db_samples[valid] = db_post - db_pre;
+                    valid++;
+                }
+                else {
+                    invalid++;
                 }
 
-                if (npf_valid > 0) {
-                    std::vector<timer::timer_tick_t> active_npf_samples(npf_samples.begin(), npf_samples.begin() + npf_valid);
-                    std::vector<timer::timer_tick_t> active_add_samples(add_samples.begin(), add_samples.begin() + npf_valid);
+                timer::engine::burn_random_cycles(ct_seed, api_post, db_post);
+            }
 
-                    const timer::timer_tick_t npf_l = timer::engine::calculate_latency(active_npf_samples);
-                    const timer::timer_tick_t add_l = timer::engine::calculate_latency(active_add_samples);
+            if (valid > 0) {
+                std::vector<timer::timer_tick_t> active_api_samples(api_samples.begin(), api_samples.begin() + valid);
+                std::vector<timer::timer_tick_t> active_db_samples(db_samples.begin(), db_samples.begin() + valid);
 
-                    if (npf_l < best_npf_l) {
-                        best_npf_l = npf_l;
-                    }
-                    if (add_l < best_add_l) {
-                        best_add_l = add_l;
-                    }
+                const timer::timer_tick_t api_l = timer::engine::calculate_latency(active_api_samples);
+                const timer::timer_tick_t db_l = timer::engine::calculate_latency(active_db_samples);
+
+                if (api_l < best_api_l) {
+                    best_api_l = api_l;
                 }
-
-                if (npf_locked) {
-                    VirtualUnlock(npf_samples.data(), sample_amount * sizeof(timer::timer_tick_t));
-                    VirtualUnlock(add_samples.data(), sample_amount * sizeof(timer::timer_tick_t));
+                if (db_l < best_db_l) {
+                    best_db_l = db_l;
                 }
             }
-        #endif
         }
 
         state.test_done.store(true, std::memory_order_release);
         t1.join();
 
-        const bool invalid_measurement = (best_ref_l == (std::numeric_limits<timer::timer_tick_t>::max)()) && (best_cpuid_l == (std::numeric_limits<timer::timer_tick_t>::max)());
+        constexpr auto uninitialized_tick = (std::numeric_limits<timer::timer_tick_t>::max)();
+        const bool invalid_measurement = (best_ref_l == uninitialized_tick && best_cpuid_l == uninitialized_tick) || (best_db_l == uninitialized_tick && best_api_l == uninitialized_tick);
 
         /* Analyze instruction latency results and report exactly what VMAware found */
         if (!invalid_measurement) {
@@ -7357,40 +7397,16 @@ public:
                 debug("TIMER: Detected artificial IPI delivery to timing threads");
                 hypervisor_detected = true;
             }
-        }
-        else {
-            /* 
-             * The only way for this situation to occur is if the measurement and the counter runs in the same physical core
-             * VMAware will never choose the same physical core to run two threads simultaneously, because its able to detect SMT siblings
-             * If there's no single valid reference, it means that the two threads were running in the same physical core, even if the kernel (and thus, VMAware) believes they were on different cores 
-             * This is proof that there's another OS scheduler running on top of the current guest OS
-             */
-            debug("TIMER: Detected hypervisor with no 1:1 vCPU pinning");
-            hypervisor_detected = true;
-        }
 
-    #if (x86_64)
-        /* Analyze memory latency results */
-        if (check_nested_hypervisors) {
-            const double npf_ratio = best_add_l ? (double)best_npf_l / (double)best_add_l : 0;
-            debug("TIMER: Memory > VMM -> ", best_npf_l, " | nVMM -> ", best_add_l, " | Ratio -> ", npf_ratio);
-            if (npf_ratio >= 4.00 || nested_bypass_detected) {
+            const double exception_ratio = best_db_l ? (double)best_db_l / (double)best_api_l : 0.0;
+            debug("TIMER: Exception > VMM -> ", best_db_l, " | nVMM -> ", best_api_l, " | Ratio -> ", exception_ratio);
+
+            if (exception_ratio >= 2.5) {
+                debug("TIMER: Detected #DB interception latency");
+                debug("TIMER: If you have #DB interception disabled, it means you're running under nested");
                 hypervisor_detected = true;
             }
         }
-
-        /* Cleanup stuff until end of function */
-        if (mem && nt_free_virtual_memory) {
-            SIZE_T free_size = 0;
-            nt_free_virtual_memory(current_process, &mem, &free_size, MEM_RELEASE);
-        }
-        if (p && whv_delete_partition) {
-            whv_delete_partition(p);
-        }
-        if (winhv_dll) {
-            FreeLibrary(winhv_dll);
-        }
-    #endif
 
         SetThreadPriorityBoost(current_thread, FALSE);
         SetThreadPriority(current_thread, old_thread_priority);
@@ -7401,6 +7417,12 @@ public:
         }
         if (ref_samples_locked) {
             VirtualUnlock(ref_samples.data(), batch_size * sizeof(timer::timer_tick_t));
+        }
+        if (api_samples_locked) {
+            VirtualUnlock(api_samples.data(), batch_size * sizeof(timer::timer_tick_t));
+        }
+        if (db_samples_locked) {
+            VirtualUnlock(db_samples.data(), batch_size * sizeof(timer::timer_tick_t));
         }
 
         return hypervisor_detected;
@@ -7595,7 +7617,7 @@ public:
 
         for (; it != end; ++it) {
             std::size_t const name_len = std::min<std::size_t>(sizeof(ifr.ifr_name) - 1, strnlen(it->ifr_name, sizeof(it->ifr_name)));
-            memcpy(ifr.ifr_name, it->ifr_name, name_len);
+            std::memcpy(ifr.ifr_name, it->ifr_name, name_len);
             *(ifr.ifr_name + name_len) = '\0';
 
             if (ioctl(sock_guard.get(), SIOCGIFFLAGS, &ifr) != 0) {
@@ -7611,13 +7633,13 @@ public:
         }
 
         if (success) {
-            memcpy(mac, ifr.ifr_hwaddr.sa_data, 6);
+            std::memcpy(mac, ifr.ifr_hwaddr.sa_data, 6);
         }
         else {
             debug("MAC: ", "not successful");
         }
 
-    #ifdef __VMAWARE_DEBUG__
+    #ifdef VMAWARE_DEBUG
         {
             std::stringstream ss;
             ss << std::hex << std::setw(2) << std::setfill('0')
@@ -7670,7 +7692,7 @@ public:
      * @implements VM::DMESG
      */
     [[nodiscard]] static bool dmesg() {
-    #if (VMA_CPP <= 11)
+    #if (VMAWARE_CPP <= 11)
         return false;
     #else
         if (!util::is_admin()) {
@@ -8508,7 +8530,7 @@ public:
             /* 64-bit Linux: IDT descriptor is 10 bytes (2-byte limit + 8-byte base) */
             __asm__ __volatile__("sidt %0" : "=m"(values));
 
-        #ifdef __VMAWARE_DEBUG__
+        #ifdef VMAWARE_DEBUG
             debug("SIDT: values = ");
             for (u8 i = 0; i < 10; ++i) {
                 debug(std::hex, std::setw(2), std::setfill('0'), static_cast<u32>(values[i]));
@@ -8525,7 +8547,7 @@ public:
             /* 32-bit Linux: IDT descriptor is 6 bytes (2-byte limit + 4-byte base) */
             __asm__ __volatile__("sidt %0" : "=m"(values));
 
-        #ifdef __VMAWARE_DEBUG__
+        #ifdef VMAWARE_DEBUG
             debug("SIDT: values = ");
             for (u8 i = 0; i < 6; ++i) {
                 debug(std::hex, std::setw(2), std::setfill('0'), static_cast<u32>(values[i]));
@@ -8577,13 +8599,13 @@ public:
                                 } _gdtr = {};
                                 #pragma pack(pop)
                                 _sgdt(&_gdtr);
-                                memcpy(gdtr, &_gdtr, sizeof(_gdtr));
+                                std::memcpy(gdtr, &_gdtr, sizeof(_gdtr));
                             #endif
                             }
                             __except (EXCEPTION_EXECUTE_HANDLER) {}
 
                             ULONG_PTR gdt_base = 0;
-                            memcpy(&gdt_base, &gdtr[2], sizeof(gdt_base));
+                            std::memcpy(&gdt_base, &gdtr[2], sizeof(gdt_base));
 
                             if ((gdt_base >> 24) == 0xFF) {
                                 debug("SGDT: 0xFF signature detected on core ", i);
@@ -8609,7 +8631,7 @@ public:
                             }
                             __except (EXCEPTION_EXECUTE_HANDLER) {}
 
-                            memcpy(&ldt_val, ldtr_buf, sizeof(ldt_val));
+                            std::memcpy(&ldt_val, ldtr_buf, sizeof(ldt_val));
                             if (ldtr_buf[0] != 0x00 && ldtr_buf[1] != 0x00) {
                                 debug("SLDT: ldtr_buf signature detected");
                                 found = true;
@@ -8642,13 +8664,13 @@ public:
                                 } idtr;
                                 #pragma pack(pop)
                                 __sidt(&idtr);
-                                memcpy(idtr_buffer, &idtr, sizeof(idtr));
+                                std::memcpy(idtr_buffer, &idtr, sizeof(idtr));
                             #endif
                             }
                             __except (EXCEPTION_EXECUTE_HANDLER) {}
 
                             ULONG_PTR idt_base = 0;
-                            memcpy(&idt_base, &idtr_buffer[2], sizeof(idt_base));
+                            std::memcpy(&idt_base, &idtr_buffer[2], sizeof(idt_base));
 
                             if ((idt_base >> 24) == 0xE8) {
                                 debug("SIDT: VPC/Hyper-V signature detected on core ", i);
@@ -8694,26 +8716,11 @@ public:
 
 
     /**
-     * @brief Check for default Azure hostname format (Azure uses Hyper-V as their base VM brand)
+     * @brief Check for default Azure hostname format
      * @category Windows, Linux
      * @implements VM::AZURE
      */
     [[nodiscard]] static bool azure() noexcept {
-        /*
-         * Returns 1u if alphanumeric, 0u if not. Here we use unsigned integers
-         * instead of booleans to avoid static analysis warnings
-         * about bitwise operations on boolean types
-         */
-        auto is_alnum_ascii = [](const char c) noexcept -> unsigned int {
-            const auto l = static_cast<unsigned char>(c | 0x20);
-            const auto d = static_cast<unsigned char>(c);
-
-            const unsigned int is_letter = (static_cast<unsigned char>(l - 'a') < 26) ? 1u : 0u;
-            const unsigned int is_digit = (static_cast<unsigned char>(d - '0') < 10) ? 1u : 0u;
-
-            return is_letter | is_digit;
-        };
-
     #if (WINDOWS)
         char buf[MAX_COMPUTERNAME_LENGTH + 1];
         DWORD len = sizeof(buf);
@@ -8861,7 +8868,7 @@ public:
 
                 while (remaining_bytes >= pattern_len) {
                     VMAWARE_PREFETCH(search_ptr + 64, _MM_HINT_T0);
-                    const void* match = memchr(search_ptr, first_byte, remaining_bytes);
+                    const void* match = std::memchr(search_ptr, first_byte, remaining_bytes);
                     if (!match) {
                         return false;
                     }
@@ -8870,7 +8877,7 @@ public:
                     if (index + pattern_len > buffer_len) {
                         return false;
                     }
-                    if (memcmp(match_ptr, pattern, pattern_len) == 0) {
+                    if (std::memcmp(match_ptr, pattern, pattern_len) == 0) {
                         return true;
                     }
                     search_ptr = match_ptr + 1;
@@ -8888,12 +8895,12 @@ public:
                 if (buffer_len < sizeof(acpi_header)) {
                     return false;
                 }
-                memcpy(&header, buffer, sizeof(header));
+                std::memcpy(&header, buffer, sizeof(header));
 
                 /* Identify and record DSDT size and OEM details */
-                if (memcmp(header.signature, "DSDT", 4) == 0) {
+                if (std::memcmp(header.signature, "DSDT", 4) == 0) {
                     dsdt_scanned = true;
-                    memcpy(dsdt_oem_id, header.oem_id, 6);
+                    std::memcpy(dsdt_oem_id, header.oem_id, 6);
                     dsdt_oem_id[6] = '\0';
                 }
 
@@ -8948,7 +8955,7 @@ public:
                         auto find_eisa = [&]() noexcept -> const u8* {
                             if (buffer_len < sizeof(pnp0a06_eisa)) return nullptr;
                             for (size_t i = 0; i <= buffer_len - sizeof(pnp0a06_eisa); ++i) {
-                                if (memcmp(buffer + i, pnp0a06_eisa, sizeof(pnp0a06_eisa)) == 0) {
+                                if (std::memcmp(buffer + i, pnp0a06_eisa, sizeof(pnp0a06_eisa)) == 0) {
                                     return buffer + i;
                                 }
                             }
@@ -8963,7 +8970,7 @@ public:
                             const size_t search_end = pnp_offset + 64 <= buffer_len ? pnp_offset + 64 : buffer_len;
 
                             for (size_t i = search_start; i + 8 < search_end; ++i) {
-                                if (memcmp(buffer + i, uid_signature, sizeof(uid_signature)) == 0) {
+                                if (std::memcmp(buffer + i, uid_signature, sizeof(uid_signature)) == 0) {
                                     /* Check if the _UID value is a string (represented by 0x0D StringPrefix in AML) starting with "SM" */
                                     if (buffer[i + 5] == 0x0D && buffer[i + 6] == 'S' && buffer[i + 7] == 'M') {
                                         debug("FIRMWARE: Detected QEMU generic device containing SMI string unique identifier");
@@ -8987,10 +8994,10 @@ public:
                     /* PRTP and PRTA variable-size relative symmetry check (replaces old exact-128 check) */
                     {
                         auto get_package_size = [&](const char* name) noexcept -> u8 {
-                            const u8* name_ptr = static_cast<const u8*>(memchr(buffer, name[0], buffer_len));
+                            const u8* name_ptr = static_cast<const u8*>(std::memchr(buffer, name[0], buffer_len));
                             while (name_ptr) {
                                 const size_t offset = static_cast<size_t>(name_ptr - buffer);
-                                if (offset + 10 <= buffer_len && memcmp(name_ptr, name, 4) == 0) {
+                                if (offset + 10 <= buffer_len && std::memcmp(name_ptr, name, 4) == 0) {
                                     /* Confirm it represents NameOp (0x08) and PackageOp (0x12) */
                                     if (offset >= 1 && *(name_ptr - 1) == 0x08 && name_ptr[4] == 0x12) {
                                         /* Scan a small window following the PackageOp for a realistic element count (32 to 255) */
@@ -9002,7 +9009,7 @@ public:
                                     }
                                 }
                                 if (offset + 1 < buffer_len) {
-                                    name_ptr = static_cast<const u8*>(memchr(name_ptr + 1, name[0], buffer_len - (offset + 1)));
+                                    name_ptr = static_cast<const u8*>(std::memchr(name_ptr + 1, name[0], buffer_len - (offset + 1)));
                                 }
                                 else {
                                     name_ptr = nullptr;
@@ -9034,7 +9041,7 @@ public:
                             const size_t end_offset = buffer_len - sizeof(qemu_hpet_signature);
 
                             for (size_t i = 0; i <= end_offset; ++i) {
-                                if (memcmp(&ptr[i], qemu_hpet_signature, sizeof(qemu_hpet_signature)) == 0) {
+                                if (std::memcmp(&ptr[i], qemu_hpet_signature, sizeof(qemu_hpet_signature)) == 0) {
                                     debug("FIRMWARE: Detected QEMU HPET period-validation signature");
                                     return core::add(brand_enum::QEMU);
                                 }
@@ -9111,9 +9118,9 @@ public:
 
                 if (buffer_len >= 36) {
                     char oem_id[7] = { 0 };
-                    memcpy(oem_id, buffer + 10, 6);
+                    std::memcpy(oem_id, buffer + 10, 6);
                     char oem_table_id[9] = { 0 };
-                    memcpy(oem_table_id, buffer + 16, 8);
+                    std::memcpy(oem_table_id, buffer + 16, 8);
 
                     if (strstr(oem_id, marker) != nullptr) {
                         debug("FIRMWARE: VMWareHardenedLoader found in OEMID -> '", oem_id, "'");
@@ -9128,7 +9135,7 @@ public:
 
             if (is_acpi) {
                 /* 4) FADT structure limits validation */
-                if (memcmp(header.signature, "FACP", 4) == 0) {
+                if (std::memcmp(header.signature, "FACP", 4) == 0) {
                     if (header.length > buffer_len) {
                         debug("FIRMWARE: declared header length larger than fetched length (declared ", header.length, ", fetched ", buffer_len, ")");
                         return true;
@@ -9139,7 +9146,7 @@ public:
                     }
 
                     fadt_table fadt;
-                    memcpy(&fadt, buffer, sizeof(fadt_table));
+                    std::memcpy(&fadt, buffer, sizeof(fadt_table));
 
                     if (fadt.p_lvl2_lat == 0x0FFF || fadt.p_lvl3_lat == 0x0FFF) {
                         debug("FIRMWARE: C2 and C3 latencies indicate VM");
@@ -9148,13 +9155,13 @@ public:
                 }
 
                 /* 5) DMA Remapping table validation */
-                if (memcmp(header.signature, "DMAR", 4) == 0) {
+                if (std::memcmp(header.signature, "DMAR", 4) == 0) {
                     size_t offset = 48; /* Subtables start at offset 48 (0x30) */
                     while (offset + 4 <= buffer_len) {
                         u16 subtable_type = 0;
                         u16 subtable_len = 0;
-                        memcpy(&subtable_type, buffer + offset, sizeof(u16));
-                        memcpy(&subtable_len, buffer + offset + 2, sizeof(u16));
+                        std::memcpy(&subtable_type, buffer + offset, sizeof(u16));
+                        std::memcpy(&subtable_len, buffer + offset + 2, sizeof(u16));
 
                         if (subtable_len < 4 || offset + subtable_len > buffer_len) {
                             break;
@@ -9199,7 +9206,7 @@ public:
                 }
 
                 /* 6) APIC/MADT table validation */
-                if (memcmp(header.signature, "APIC", 4) == 0) {
+                if (std::memcmp(header.signature, "APIC", 4) == 0) {
                     size_t offset = 44; /* MADT subtables start at offset 44 (0x2C) */
                     u8 qemu_override_mask = 0;
 
@@ -9218,8 +9225,8 @@ public:
                             u32 global_system_interrupt = 0;
                             u16 flags = 0;
 
-                            memcpy(&global_system_interrupt, buffer + offset + 4, sizeof(u32));
-                            memcpy(&flags, buffer + offset + 8, sizeof(u16));
+                            std::memcpy(&global_system_interrupt, buffer + offset + 4, sizeof(u32));
+                            std::memcpy(&flags, buffer + offset + 8, sizeof(u16));
 
                             u8 source_mask = 0;
                             switch (source) {
@@ -9404,40 +9411,61 @@ public:
                 continue;
             }
             const long file_size = statbuf.st_size;
-            if (file_size <= 0) {
-                debug("FIRMWARE: file empty or error ", entry->d_name);
-                continue;
-            }
-
-            if (file_size > MAX_TABLE_SIZE) {
-                debug("FIRMWARE: table too large, skipping ", entry->d_name);
-                continue;
-            }
-
-            const size_t file_size_u = static_cast<size_t>(file_size);
 
             std::vector<u8> buffer;
-            try {
-                buffer.resize(file_size_u);
-            }
-            catch (...) {
-                debug("FIRMWARE: failed to allocate memory for buffer");
-                continue;
-            }
+            size_t file_size_u = 0;
 
-            size_t total = 0;
-            while (total < file_size_u) {
-                const ssize_t n = read(fdguard.fd, buffer.data() + total, file_size_u - total);
-                if (n <= 0) {
-                    break;
+            if (file_size <= 0) {
+                constexpr size_t chunk_size = 4096;
+                u8 chunk[chunk_size];
+                while (true) {
+                    const ssize_t n = read(fdguard.fd, chunk, chunk_size);
+                    if (n < 0) {
+                        break;
+                    }
+                    if (n == 0) {
+                        break;
+                    }
+                    buffer.insert(buffer.end(), chunk, chunk + n);
+                    if (buffer.size() > MAX_TABLE_SIZE) {
+                        debug("FIRMWARE: table size exceeds maximum limit, truncating");
+                        break;
+                    }
+                }
+                file_size_u = buffer.size();
+                if (file_size_u == 0) {
+                    debug("FIRMWARE: file empty or read error ", entry->d_name);
+                    continue;
+                }
+            }
+            else {
+                if (file_size > MAX_TABLE_SIZE) {
+                    debug("FIRMWARE: table too large, skipping ", entry->d_name);
+                    continue;
                 }
 
-                total += static_cast<size_t>(n);
-            }
+                file_size_u = static_cast<size_t>(file_size);
+                try {
+                    buffer.resize(file_size_u);
+                }
+                catch (...) {
+                    debug("FIRMWARE: failed to allocate memory for buffer");
+                    continue;
+                }
 
-            if (total != file_size_u) {
-                debug("FIRMWARE: could not read full table ", entry->d_name);
-                continue;
+                size_t total = 0;
+                while (total < file_size_u) {
+                    const ssize_t n = read(fdguard.fd, buffer.data() + total, file_size_u - total);
+                    if (n <= 0) {
+                        break;
+                    }
+                    total += static_cast<size_t>(n);
+                }
+
+                if (total != file_size_u) {
+                    debug("FIRMWARE: could not read full table ", entry->d_name);
+                    continue;
+                }
             }
 
             if (scan_buffer(buffer.data(), file_size_u, true)) {
@@ -9462,7 +9490,7 @@ public:
 
         #if (LINUX)
             const std::string pci_path = "/sys/bus/pci/devices";
-            #if (VMA_CPP >= 17)
+            #if (VMAWARE_CPP >= 17)
                 /* Std::filesystem throws exceptions when directories don't exist (SIGSEGV) */
                 std::error_code ec;
                 auto dir_iter = std::filesystem::directory_iterator(pci_path, ec);
@@ -9942,7 +9970,7 @@ public:
         #endif
 
         auto strnlen = [](const char* s, const size_t max) noexcept -> size_t {
-            const void* p = memchr(s, 0, max);
+            const void* p = std::memchr(s, 0, max);
             if (!p) {
                 return max;
             }
@@ -10042,7 +10070,7 @@ public:
                 if (NT_SUCCESS(query_st)) {
                     BYTE* payload = reinterpret_cast<BYTE*>(allocation_base) + header_size;
                     if (query_iosb.Information >= header_size + out_size) {
-                        memcpy(out_buf, payload, out_size);
+                        std::memcpy(out_buf, payload, out_size);
                         success = true;
                     }   
                 }
@@ -10871,7 +10899,7 @@ public:
 
         const size_t copyLen = (actual_data_len < (sizeof(product_id) - 1)) ? actual_data_len : (sizeof(product_id) - 1);
 
-        memcpy(product_id, kv->Data, copyLen);
+        std::memcpy(product_id, kv->Data, copyLen);
         product_id[copyLen] = '\0';
 
         /* A list of known Product IDs associated with public malware analysis sandboxes */
@@ -10896,7 +10924,7 @@ public:
          * if a match is found, we identify the specific sandbox environment and flag it
          */
         for (const auto& target : targets) {
-            if (memcmp(product_id, target.product_id, target_length) == 0) {
+            if (std::memcmp(product_id, target.product_id, target_length) == 0) {
                 debug("GAMARUE: Detected ", target.product_id);
                 return core::add(target.brand);
             }
@@ -11036,11 +11064,11 @@ public:
             wchar_t full_path[260];
 
             /* Memcpy as it is faster than wcscpy/wcscat */
-            memcpy(full_path, prefix, sizeof(prefix)); 
+            std::memcpy(full_path, prefix, sizeof(prefix)); 
 
             const size_t name_len = wcslen(base_name);
             if (prefix_len + name_len < 260) {
-                memcpy(full_path + prefix_len, base_name, (name_len + 1) * sizeof(wchar_t));
+                std::memcpy(full_path + prefix_len, base_name, (name_len + 1) * sizeof(wchar_t));
             }
             else {
                 /* Should not happen for standard VM artifacts */
@@ -11056,7 +11084,7 @@ public:
                 rtl_init_unicode_string(&u_name, path);
 
                 OBJECT_ATTRIBUTES obj_attr;
-                memset(&obj_attr, 0, sizeof(obj_attr));
+                std::memset(&obj_attr, 0, sizeof(obj_attr));
                 obj_attr.Length = sizeof(obj_attr);
                 obj_attr.ObjectName = &u_name;
                 obj_attr.Attributes = OBJ_CASE_INSENSITIVE;
@@ -11307,25 +11335,28 @@ public:
             return false;
         }
 
-        for (ULONG i = 0; i < system_module_info_ex->NumberOfModules; ++i) {
-            const char* driverPath = reinterpret_cast<const char*>(system_module_info_ex->Module[i].ImageName);
+        const size_t max_modules = (ul_size - offsetof(_SYSTEM_MODULE_INFORMATION_EX, Module)) / sizeof(_SYSTEM_MODULE_INFORMATION);
+        const ULONG number_of_modules = (system_module_info_ex->NumberOfModules < max_modules) ? system_module_info_ex->NumberOfModules : static_cast<ULONG>(max_modules);
+
+        for (ULONG i = 0; i < number_of_modules; ++i) {
+            const char* driver_path = reinterpret_cast<const char*>(system_module_info_ex->Module[i].ImageName);
             if (
-                strstr(driverPath, "VBoxGuest") || /* only installed after vbox guest additions */
-                strstr(driverPath, "VBoxMouse") ||
-                strstr(driverPath, "VBoxSF")
+                strstr(driver_path, "VBoxGuest") || /* Only installed after vbox guest additions */
+                strstr(driver_path, "VBoxMouse") ||
+                strstr(driver_path, "VBoxSF")
                ) {
-                debug("DRIVERS: Detected VBox driver: ", driverPath);
+                debug("DRIVERS: Detected VBox driver: ", driver_path);
                 region_size = 0;
                 nt_free_virtual_memory(current_process, &allocated_memory, &region_size, MEM_RELEASE);
                 return core::add(brand_enum::VBOX);
             }
 
             if (
-                strstr(driverPath, "vmusbmouse") ||
-                strstr(driverPath, "vmmouse") ||
-                strstr(driverPath, "vmmemctl")
+                strstr(driver_path, "vmusbmouse") ||
+                strstr(driver_path, "vmmouse") ||
+                strstr(driver_path, "vmmemctl")
                ) {
-                debug("DRIVERS: Detected VMware driver: ", driverPath);
+                debug("DRIVERS: Detected VMware driver: ", driver_path);
                 region_size = 0;
                 nt_free_virtual_memory(current_process, &allocated_memory, &region_size, MEM_RELEASE);
                 return core::add(brand_enum::VMWARE);
@@ -11675,7 +11706,7 @@ public:
         const bool mismatch = 
             (object_name->Name.Length != expected_name.Length) ||
             (object_name->Name.Buffer == nullptr) ||
-            (memcmp(object_name->Name.Buffer, expected_name.Buffer, expected_name.Length) != 0);
+            (std::memcmp(object_name->Name.Buffer, expected_name.Buffer, expected_name.Length) != 0);
 
         return mismatch ? core::add(brand_enum::SANDBOXIE) : false;
     }
@@ -11787,7 +11818,7 @@ public:
             constexpr size_t subkeys_offset = offsetof(KEY_FULL_INFORMATION, SubKeys);
             if (info_buffer.size() >= subkeys_offset + sizeof(ULONG)) {
                 ULONG subkeys_count = 0;
-                memcpy(&subkeys_count, info_buffer.data() + subkeys_offset, sizeof(ULONG));
+                std::memcpy(&subkeys_count, info_buffer.data() + subkeys_offset, sizeof(ULONG));
                 has_subkeys = (subkeys_count > 0);
                 query_successful = true;
             }
@@ -12003,7 +12034,7 @@ public:
 
         /* Static struct for SEH filtering to avoid release-mode lambda optimizations */
         struct exception_handler {
-            static LONG execute(const u32 code, EXCEPTION_POINTERS* info, trap_context* ctx) noexcept {
+            static VMAWARE_NOINLINE LONG execute(const u32 code, EXCEPTION_POINTERS* info, trap_context* ctx) noexcept {
                 if (!info || !info->ExceptionRecord || !info->ContextRecord) {
                     return EXCEPTION_CONTINUE_SEARCH;
                 }
@@ -12101,7 +12132,7 @@ public:
         }
 
         struct exception_handler {
-            static int execute(const unsigned int code, struct _EXCEPTION_POINTERS* ep, volatile ULONG_PTR* out_trap_ip, volatile bool* out_anomaly) {
+            static VMAWARE_NOINLINE int execute(const unsigned int code, struct _EXCEPTION_POINTERS* ep, volatile ULONG_PTR* out_trap_ip, volatile bool* out_anomaly) {
                 if (code == EXCEPTION_SINGLE_STEP && ep && ep->ContextRecord) {
                 #if (x86_64)
                     *out_trap_ip = ep->ContextRecord->Rip;
@@ -12112,6 +12143,7 @@ public:
                     return EXCEPTION_CONTINUE_EXECUTION;
                 }
 
+                debug("INTERRUPT_SHADOW: Exception anomaly detected, hypervisor seems to be present with CPUID interception disabled");
                 *out_anomaly = true;
                 return EXCEPTION_EXECUTE_HANDLER;
             }
@@ -12328,9 +12360,8 @@ public:
             bool step_triggered = false;
             const u64 stub_base = reinterpret_cast<u64>(dbvm_icebp_stub);
 
-            /* Local helper struct to evaluate exception parameters across compilers */
-            struct icebp_handler {
-                static LONG execute(
+            struct exception_handler {
+                static VMAWARE_NOINLINE LONG execute(
                     const EXCEPTION_POINTERS* ep,
                     DWORD exception_code,
                     bool* rip_failed,
@@ -12358,7 +12389,7 @@ public:
             __try {
                 memory::execute(dbvm_icebp_stub);
             }
-            __except (icebp_handler::execute(
+            __except (exception_handler::execute(
                 GetExceptionInformation(),
                 GetExceptionCode(),
                 &rip_failed,
@@ -13228,58 +13259,6 @@ public:
             }
         }
 
-        const bool rdrand_support = ((c >> 30) & 1u) != 0;
-
-        auto is_rdrand_spoofed = [&]() noexcept -> bool {
-        #if (MSVC) && !(CLANG)
-            unsigned int v = 0;
-
-            __try {
-                const int ok = _rdrand32_step(&v);
-                if (ok && !rdrand_support) {
-                    debug("CPU_HEURISTIC: Hypervisor detected hiding RDRAND capabilities");
-                    return true;
-                }
-            }
-            __except (EXCEPTION_EXECUTE_HANDLER) {
-                if (rdrand_support) {
-                    debug("CPU_HEURISTIC: Hypervisor did not handle RDRAND correctly");
-                    return true;
-                }
-            }
-        #else
-            unsigned int v = 0;
-            unsigned char ok = 0;
-
-            __try {
-                asm volatile("rdrand %0\n\tsetc %1"
-                    : "=r"(v), "=qm"(ok)
-                    :
-                    : "cc"
-                );
-
-                if (ok && !rdrand_support) {
-                    debug("CPU_HEURISTIC: Hypervisor detected hiding RDRAND capabilities");
-                    return true;
-                }
-            }
-            __except (EXCEPTION_EXECUTE_HANDLER) {
-                if (rdrand_support) {
-                    debug("CPU_HEURISTIC: Hypervisor did not handle RDRAND correctly");
-                    return true;
-                }
-            }
-        #endif
-
-            return false;
-        };
-
-        if (!is_spoofed) {
-            if (is_rdrand_spoofed()) {
-                is_spoofed = true;
-            }
-        }
-
         if (old_affinity != 0) {
             SetThreadAffinityMask(current_thread, old_affinity);
         }
@@ -13398,7 +13377,7 @@ public:
             }
             else {
                 amd_target_mem = base;
-                memset(amd_target_mem, 0xA5, target_size);
+                std::memset(amd_target_mem, 0xA5, target_size);
 
                 const std::uintptr_t paddr = reinterpret_cast<std::uintptr_t>(amd_target_mem);
             #if (x86_64)
@@ -13423,7 +13402,7 @@ public:
             NTSTATUS st2 = nt_allocate_virtual_memory(current_process, &base, 0, &sz, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
             if (NT_SUCCESS(st2) && base != nullptr) {
                 exec_mem = base;
-                memcpy(exec_mem, bytes, code_size);
+                std::memcpy(exec_mem, bytes, code_size);
 
                 /* Change to RX */
                 ULONG old_protection = 0;
@@ -13499,190 +13478,84 @@ public:
             return spoofed;
         }
 
-        /*
-         * Ok so if the CPU is intel, the motherboard should be intel aswell (and same with AMD)
-         * this doesnt happen in most public hardened configs out there so lets abuse it
-         */
-        static constexpr unsigned int VID_INTEL = 0x8086;
-        static constexpr unsigned int VID_AMD_ATI = 0x1002;
-        static constexpr unsigned int VID_AMD_MICRO = 0x1022;
+        /* So if the CPU is Intel, the motherboard should be Intel aswell (and same with AMD) */
+        static constexpr u32 VID_INTEL = 0x8086;
+        static constexpr u32 VID_AMD_MICRO = 0x1022; /* AMD Core Motherboard / Chipset / Root Complex / PSP */
+        static constexpr u32 VID_AMD_ATI = 0x1002; /* AMD / ATI Graphics & legacy display controllers */
 
         enum class motherboard_vendor { Unknown = 0, Intel = 1, AMD = 2 };
 
         auto detect_motherboard = []() noexcept -> motherboard_vendor {
-            static constexpr const wchar_t* TOKENS[] = {
-                L"host bridge", L"northbridge", L"southbridge", L"pci bridge", L"chipset", L"pch", L"fch",
-                L"platform controller", L"lpc", L"sata controller", L"ahci", L"ide controller", L"usb controller",
-                L"xhci", L"usb3", L"usb 3.0", L"usb 3", L"pcie root", L"pci express", L" sata", nullptr
-            };
+            HDEVINFO handle_dev_info = SetupDiGetClassDevsW(
+                nullptr,
+                L"PCI",
+                nullptr,
+                DIGCF_ALLCLASSES | DIGCF_PRESENT
+            );
 
-            auto contains_token = [](const wchar_t* haystack) noexcept -> bool {
-                if (!haystack) {
-                    return false;
-                }
+            if (handle_dev_info == INVALID_HANDLE_VALUE) {
+                return motherboard_vendor::Unknown;
+            }
 
-                for (const wchar_t* const* t = TOKENS; *t; ++t) {
-                    const wchar_t* needle = *t;
-                    const wchar_t* h = haystack;
-
-                    /* Naive scan is faster than BM/KMP for very short needles/haystacks */
-                    while (*h) {
-                        const wchar_t* h_iter = h;
-                        const wchar_t* n_iter = needle;
-
-                        while (*n_iter) {
-                            wchar_t hc = *h_iter;
-                            if (hc >= L'A' && hc <= L'Z') {
-                                hc += 32;
-                            }
-                            if (hc != *n_iter) {
-                                break;
-                            }
-
-                            h_iter++;
-                            n_iter++;
-                        }
-
-                        if (!*n_iter) {
-                            return true;
-                        }
-                        h++;
+            auto parse_hex4 = [](const wchar_t* p) noexcept -> u32 {
+                u32 val = 0;
+                for (int i = 0; i < 4; ++i) {
+                    const wchar_t c = p[i];
+                    u32 nib;
+                    if (c >= L'0' && c <= L'9') {
+                        nib = static_cast<u32>(c - L'0');
                     }
-                }
-
-                return false;
-            };
-
-            auto find_vendor_hex = [](const wchar_t* wptr) noexcept -> u32 {
-                if (!wptr) {
-                    return 0;
-                }
-
-                const wchar_t* p = wptr;
-                while (*p) {
-                    /* Check for "VEN_" (case-insensitive) */
-                    if (p[0] != L'\0' && p[1] != L'\0' && p[2] != L'\0' && p[3] != L'\0') {
-                        if (((p[0] | 0x20) == L'v') &&
-                            ((p[1] | 0x20) == L'e') &&
-                            ((p[2] | 0x20) == L'n') &&
-                            (p[3] == L'_')) {
-
-                            const wchar_t* q = p + 4;
-                            u32 val = 0;
-                            int got = 0;
-
-                            while (got < 4 && *q) {
-                                const wchar_t c = *q;
-                                u32 nib = 0;
-                                if (c >= L'0' && c <= L'9') {
-                                    nib = static_cast<u32>(c - L'0');
-                                }
-                                else if ((c | 0x20) >= L'a' && (c | 0x20) <= L'f') {
-                                    nib = static_cast<u32>((c | 0x20) - L'a' + 10);
-                                }
-                                else {
-                                    break;
-                                }
-
-                                val = (val << 4) | nib;
-                                ++got; ++q;
-                            }
-
-                            if (got == 4) {
-                                return val;
-                            }
-                        }
+                    else if ((c | 0x20) >= L'a' && (c | 0x20) <= L'f') {
+                        nib = static_cast<u32>((c | 0x20) - L'a' + 10);
                     }
-                    ++p;
+                    else {
+                        return 0;
+                    }
+                    val = (val << 4) | nib;
                 }
-
-                return 0;
+                return val;
             };
 
-            /* SetupAPI stuff */
+            SP_DEVINFO_DATA dev_info_data{};
+            dev_info_data.cbSize = sizeof(SP_DEVINFO_DATA);
+
+            wchar_t instance_id[256];
             int intel_hits = 0;
             int amd_hits = 0;
 
-            wchar_t stack_buf[1024]{};
-            stack_buf[ARRAYSIZE(stack_buf) - 1] = L'\0';
-            std::vector<BYTE> heap_buf; /* fallback for rare huge strings */
-            heap_buf.push_back(0);
+            for (DWORD i = 0; SetupDiEnumDeviceInfo(handle_dev_info, i, &dev_info_data); ++i) {
+                if (SetupDiGetDeviceInstanceIdW(handle_dev_info, &dev_info_data, instance_id, ARRAYSIZE(instance_id), nullptr)) {
+                    if (((instance_id[0] | 0x20) == L'p') &&
+                        ((instance_id[1] | 0x20) == L'c') &&
+                        ((instance_id[2] | 0x20) == L'i') &&
+                        (instance_id[3] == L'\\') &&
+                        ((instance_id[4] | 0x20) == L'v') &&
+                        ((instance_id[5] | 0x20) == L'e') &&
+                        ((instance_id[6] | 0x20) == L'n') &&
+                        (instance_id[7] == L'_')) {
 
-            auto scan_devices = [&](const GUID* classGuid, DWORD flags) noexcept {
-                HDEVINFO handle_dev_info = SetupDiGetClassDevsW(classGuid, nullptr, nullptr, flags);
-                if (handle_dev_info == INVALID_HANDLE_VALUE) {
-                    return;
-                }
-
-                SP_DEVINFO_DATA dev_info_data{};
-                dev_info_data.cbSize = sizeof(SP_DEVINFO_DATA);
-
-                for (DWORD i = 0; SetupDiEnumDeviceInfo(handle_dev_info, i, &dev_info_data); ++i) {
-                    const wchar_t* w_desc = nullptr;
-                    DWORD req_size = 0;
-                    DWORD prop_type = 0;
-
-                    if (SetupDiGetDeviceRegistryPropertyW(handle_dev_info, &dev_info_data, SPDRP_DEVICEDESC, &prop_type, reinterpret_cast<PBYTE>(stack_buf), sizeof(stack_buf), &req_size)) {
-                        w_desc = stack_buf;
-                    }
-                    else if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
-                        if (heap_buf.size() < req_size) {
-                            heap_buf.resize(req_size);
+                        const u32 vid = parse_hex4(instance_id + 8);
+                        if (vid == VID_INTEL) {
+                            intel_hits++;
                         }
-                        if (SetupDiGetDeviceRegistryPropertyW(handle_dev_info, &dev_info_data, SPDRP_DEVICEDESC, &prop_type, heap_buf.data(), req_size, nullptr)) {
-                            w_desc = reinterpret_cast<const wchar_t*>(heap_buf.data());
+                        else if (vid == VID_AMD_MICRO) {
+                            amd_hits += 2;
                         }
-                    }
-
-                    /* Check if the description contains any interesting stuff */
-                    if (w_desc && contains_token(w_desc)) {
-                        /* If interesting get hwid to get vendor */
-                        const wchar_t* w_hardware_id = nullptr;
-
-                        if (SetupDiGetDeviceRegistryPropertyW(handle_dev_info, &dev_info_data, SPDRP_HARDWAREID, &prop_type, reinterpret_cast<PBYTE>(stack_buf), sizeof(stack_buf), &req_size)) {
-                            w_hardware_id = stack_buf;
-                        }
-                        else if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
-                            if (heap_buf.size() < req_size) heap_buf.resize(req_size);
-                            if (SetupDiGetDeviceRegistryPropertyW(handle_dev_info, &dev_info_data, SPDRP_HARDWAREID, &prop_type, heap_buf.data(), req_size, nullptr)) {
-                                w_hardware_id = reinterpret_cast<const wchar_t*>(heap_buf.data());
-                            }
-                        }
-
-                        if (w_hardware_id) {
-                            const u32 vid = find_vendor_hex(w_hardware_id);
-                            if (vid == VID_INTEL) {
-                                intel_hits++;
-                            }
-                            else if (vid == VID_AMD_ATI || vid == VID_AMD_MICRO) {
-                                amd_hits++;
-                            }
+                        else if (vid == VID_AMD_ATI) {
+                            amd_hits += 1;
                         }
                     }
                 }
-                SetupDiDestroyDeviceInfoList(handle_dev_info);
-            };
-
-            /*
-             * GUID_DEVCLASS_SYSTEM covers Host Bridges, LPC, PCI bridges Chipset/CPU etc
-             * GUID_DEVCLASS_USB covers USB controller stuff
-             * GUID_DEVCLASS_HDC covers SATA/IDE
-             */
-            const GUID* interesting_classes[] = {
-                &GUID_DEVCLASS_SYSTEM,
-                &GUID_DEVCLASS_USB,
-                &GUID_DEVCLASS_HDC
-            };
-
-            for (const GUID* guid : interesting_classes) {
-                scan_devices(guid, DIGCF_PRESENT);
             }
 
-            /* If no stuff then maybe query all devices in the system with DIGCF_ALLCLASSES | DIGCF_PRESENT? */
-            if (intel_hits > amd_hits) {
+            SetupDiDestroyDeviceInfoList(handle_dev_info);
+
+            /* Motherboard chipsets provide 10-40+ integrated PCI devices */
+            /* Add-in cards (like Intel Wi-Fi on AMD board, or AMD GPU on Intel board) should only provide like 1-3 devices */
+            if (intel_hits >= 3 && intel_hits > amd_hits * 2) {
                 return motherboard_vendor::Intel;
             }
-            if (amd_hits > intel_hits) {
+            if (amd_hits >= 3 && amd_hits > intel_hits * 2) {
                 return motherboard_vendor::AMD;
             }
 
@@ -13692,23 +13565,23 @@ public:
         const motherboard_vendor vendor = detect_motherboard();
 
         switch (vendor) {
-            case motherboard_vendor::Intel:
-                if (claimed_amd && !claimed_intel) {
-                    debug("CPU_HEURISTIC: CPU reports AMD but chipset looks Intel");
-                    spoofed = true;
-                }
-                break;
-            case motherboard_vendor::AMD:
-                if (claimed_intel && !claimed_amd) {
-                    debug("CPU_HEURISTIC: CPU reports Intel but chipset looks AMD");
-                    spoofed = true;
-                }
-                break;
-            case motherboard_vendor::Unknown:
-                debug("CPU_HEURISTIC: Could not determine chipset vendor");
-                break;
-            default:
-                VMAWARE_ASSUME(0);
+        case motherboard_vendor::Intel:
+            if (claimed_amd && !claimed_intel) {
+                debug("CPU_HEURISTIC: CPU reports AMD but chipset looks Intel");
+                spoofed = true;
+            }
+            break;
+        case motherboard_vendor::AMD:
+            if (claimed_intel && !claimed_amd) {
+                debug("CPU_HEURISTIC: CPU reports Intel but chipset looks AMD");
+                spoofed = true;
+            }
+            break;
+        case motherboard_vendor::Unknown:
+            debug("CPU_HEURISTIC: Could not determine chipset vendor");
+            break;
+        default:
+            VMAWARE_ASSUME(0);
         }
     #endif
         return spoofed;
@@ -13768,6 +13641,11 @@ public:
                 continue;
             }
 
+            #define DWORD_MAX 4294967295
+            if (needed > (DWORD_MAX - sizeof(wchar_t))) {
+                continue;
+            }
+
             if (needed + sizeof(wchar_t) > buffer_size) {
                 DWORD new_size = needed + sizeof(wchar_t);
                 BYTE* new_buffer = static_cast<BYTE*>(realloc(buffer, new_size));
@@ -13792,7 +13670,9 @@ public:
                 continue;
             }
 
-            reinterpret_cast<wchar_t*>(buffer)[needed / sizeof(wchar_t)] = L'\0';
+            if (buffer != nullptr) {
+                reinterpret_cast<wchar_t*>(buffer)[needed / sizeof(wchar_t)] = L'\0';
+            }
 
             const wchar_t* const buffer_start = reinterpret_cast<const wchar_t*>(buffer);
             const wchar_t* const buffer_end = buffer_start + (needed / sizeof(wchar_t));
@@ -14013,6 +13893,11 @@ public:
     #if (!x86)
         return false;
     #else
+        #if (defined VMAWARE_DEBUG)
+            if (IsDebuggerPresent()) {
+                return false; /* To not hit the debugger breakpoint, making the debugger impossible to advance */
+            }
+        #endif  
         if (util::is_x86_process_on_arm()) {
             return false;
         }
@@ -14238,8 +14123,8 @@ public:
         thread_local static volatile bool ermsb_trap_detected = false;
         ermsb_trap_detected = false;
 
-        struct handler {
-            static LONG __stdcall execute(const PEXCEPTION_POINTERS ctx) {
+        struct exception_handler {
+            static VMAWARE_NOINLINE LONG __stdcall execute(const PEXCEPTION_POINTERS ctx) {
                 if (ctx->ExceptionRecord->ExceptionCode == EXCEPTION_SINGLE_STEP) {
                     ermsb_trap_detected = true;
                     return EXCEPTION_CONTINUE_EXECUTION;
@@ -14248,7 +14133,7 @@ public:
             }
         };
 
-        const PVOID veh_handle = rtl_add_vectored_exception_handler(1, handler::execute);
+        const PVOID veh_handle = rtl_add_vectored_exception_handler(1, exception_handler::execute);
         if (!veh_handle) {
             SIZE_T free_size = 0;
             nt_free_virtual_memory(current_process, &src_page, &free_size, MEM_RELEASE);
@@ -14325,8 +14210,8 @@ public:
             return false;
         }
 
-        struct handler {
-            static LONG execute(const EXCEPTION_POINTERS* info, DWORD* exceptionCode) {
+        struct exception_handler {
+            static VMAWARE_NOINLINE LONG execute(const EXCEPTION_POINTERS* info, DWORD* exceptionCode) {
                 *exceptionCode = info->ExceptionRecord->ExceptionCode;
             #if (x86_64)
                 info->ContextRecord->Rbx = info->ContextRecord->R8;
@@ -14344,7 +14229,7 @@ public:
             memory::execute(cpuid_singlestep_stub);
             /* If the hypervisor completely swallows all exceptions, is_vm still remains true */
         }
-        __except (handler::execute(GetExceptionInformation(), &exc_code_cpuid)) {
+        __except (exception_handler::execute(GetExceptionInformation(), &exc_code_cpuid)) {
             /*
              * If the exception doesnt reach this block, hypervisor delayed the trap flag over cpuid, execution fell through into
              * the bad bytes (C7 B2) causing STATUS_ILLEGAL_INSTRUCTION
@@ -14373,7 +14258,7 @@ public:
             __try {
                 memory::execute(rdpru_singlestep_stub);
             }
-            __except (handler::execute(GetExceptionInformation(), &exc_code_rdpru)) {
+            __except (exception_handler::execute(GetExceptionInformation(), &exc_code_rdpru)) {
                 if (exc_code_rdpru == EXCEPTION_SINGLE_STEP) {
                     rdpru_is_vm = false;
                 }
@@ -14654,31 +14539,31 @@ public:
         auto parse_log = [](const std::vector<u8>& log_data) noexcept -> bool {
             auto read_u16 = [](const u8* ptr) noexcept -> u16 {
                 u16 val = 0;
-                memcpy(&val, ptr, sizeof(u16));
+                std::memcpy(&val, ptr, sizeof(u16));
                 return val;
             };
 
             auto read_u32 = [](const u8* ptr) noexcept -> u32 {
                 u32 val = 0;
-                memcpy(&val, ptr, sizeof(u32));
+                std::memcpy(&val, ptr, sizeof(u32));
                 return val;
             };
 
             auto read_u64 = [](const u8* ptr) noexcept -> u64 {
                 u64 val = 0;
-                memcpy(&val, ptr, sizeof(u64));
+                std::memcpy(&val, ptr, sizeof(u64));
                 return val;
             };
 
             auto read_alg_size = [](const u8* ptr) noexcept -> alg_size {
                 alg_size val = { 0, 0 };
-                memcpy(&val, ptr, sizeof(alg_size));
+                std::memcpy(&val, ptr, sizeof(alg_size));
                 return val;
             };
 
             auto read_hdr = [](const u8* ptr) noexcept -> TCG_PCR_EVENT_HEADER {
                 TCG_PCR_EVENT_HEADER val = { 0, 0, {0}, 0 };
-                memcpy(&val, ptr, sizeof(TCG_PCR_EVENT_HEADER));
+                std::memcpy(&val, ptr, sizeof(TCG_PCR_EVENT_HEADER));
                 return val;
             };
 
@@ -14703,7 +14588,7 @@ public:
             const u8* spec_id_payload = p_buffer + first_event_data_offset;
             const u32 spec_id_size = first_hdr.eventSize;
 
-            if (spec_id_size < 28 || memcmp(spec_id_payload, "Spec ID Event03", 15) != 0) {
+            if (spec_id_size < 28 || std::memcmp(spec_id_payload, "Spec ID Event03", 15) != 0) {
                 return false;
             }
 
@@ -14719,13 +14604,13 @@ public:
                 active_algs[i] = read_alg_size(alg_ptr + (i * sizeof(alg_size)));
             }
 
-            auto get_digest_size = [&active_algs](u16 algId) noexcept -> u16 {
+            auto get_digest_size = [&active_algs](const u16 algorithm_id) noexcept -> u16 {
                 for (const auto& alg : active_algs) {
-                    if (alg.algId == algId) {
+                    if (alg.algId == algorithm_id) {
                         return alg.digestSize;
                     }
                 }
-                switch (algId) {
+                switch (algorithm_id) {
                     case 0x0004: return 20; /* SHA-1 */
                     case 0x000B: return 32; /* SHA-256 */
                     case 0x000C: return 48; /* SHA-384 */
@@ -14753,7 +14638,9 @@ public:
 
                 bool parse_error = false;
                 for (u32 i = 0; i < digest_count; ++i) {
-                    if (current_offset + local_offset > total_size || total_size - (current_offset + local_offset) < 2) {
+                    const size_t remaining_space = total_size - current_offset;
+
+                    if (local_offset > remaining_space || remaining_space - local_offset < 2) {
                         parse_error = true;
                         break;
                     }
@@ -14766,7 +14653,7 @@ public:
                         break;
                     }
 
-                    if (total_size - (current_offset + local_offset) < digest_size) {
+                    if (total_size - current_offset - local_offset < digest_size) {
                         parse_error = true;
                         break;
                     }
@@ -14777,13 +14664,13 @@ public:
                     break;
                 }
 
-                if (total_size - (current_offset + local_offset) < 4) {
+                if (total_size - current_offset - local_offset < 4) {
                     break;
                 }
                 const u32 event_size = read_u32(event_ptr + local_offset);
                 local_offset += 4;
 
-                if (total_size - (current_offset + local_offset) < event_size) {
+                if (total_size - current_offset - local_offset < event_size) {
                     break;
                 }
 
@@ -14985,13 +14872,13 @@ public:
 
         auto read_u16 = [](const u8* const ptr) noexcept -> u16 {
             u16 val;
-            memcpy(&val, ptr, sizeof(val));
+            std::memcpy(&val, ptr, sizeof(val));
             return val;
         };
 
         auto read_u32 = [](const u8* const ptr) noexcept -> u32 {
             u32 val;
-            memcpy(&val, ptr, sizeof(val));
+            std::memcpy(&val, ptr, sizeof(val));
             return val;
         };
 
@@ -15237,7 +15124,7 @@ public:
             }
 
             if (out_digest) {
-                memcpy(out_digest, resp + offset, digest_size > 32 ? 32 : digest_size);
+                std::memcpy(out_digest, resp + offset, digest_size > 32 ? 32 : digest_size);
             }
             if (out_digest_size) {
                 *out_digest_size = digest_size;
@@ -15458,7 +15345,7 @@ public:
                 offset += first_event_size;
 
                 if (first_event_type == 0x03 && first_event_size >= 24) {
-                    if (memcmp(first_event_data, "Spec ID Event03", 15) == 0) {
+                    if (std::memcmp(first_event_data, "Spec ID Event03", 15) == 0) {
                         const u8 num_algs = first_event_data[23];
                         u32 alg_offset = 24;
                         bool has_sha256 = false;
@@ -15545,7 +15432,7 @@ public:
                 if (temp_digest_count < 16) {
                     temp_digests[temp_digest_count].alg_id = alg_id;
                     temp_digests[temp_digest_count].size = size;
-                    memcpy(temp_digests[temp_digest_count].digest, log_buffer + offset, size);
+                    std::memcpy(temp_digests[temp_digest_count].digest, log_buffer + offset, size);
                     temp_digest_count++;
                 }
                 offset += size;
@@ -15575,7 +15462,7 @@ public:
                     tracked_event ev{};
                     ev.event_type = event_type;
                     ev.digest_size = temp_digests[i].size;
-                    memcpy(ev.digest, temp_digests[i].digest, temp_digests[i].size > 32 ? 32 : temp_digests[i].size);
+                    std::memcpy(ev.digest, temp_digests[i].digest, temp_digests[i].size > 32 ? 32 : temp_digests[i].size);
                     if (!pcr_events[pcr_index].push(ev)) {
                         free_resources();
                         return false;
@@ -15586,7 +15473,7 @@ public:
 
         /* Perform step-by-step state reconstruction */
         u8 reconstructed_pcrs[24][32];
-        memset(reconstructed_pcrs, 0, sizeof(reconstructed_pcrs));
+        std::memset(reconstructed_pcrs, 0, sizeof(reconstructed_pcrs));
 
         for (u32 pcr_idx = 0; pcr_idx < 8; ++pcr_idx) {
             u8 current_pcr[32] = { 0 };
@@ -15596,14 +15483,14 @@ public:
                     continue;
                 }
                 u8 concat[64];
-                memcpy(concat, current_pcr, 32);
-                memcpy(concat + 32, ev.digest, 32);
+                std::memcpy(concat, current_pcr, 32);
+                std::memcpy(concat + 32, ev.digest, 32);
                 if (!calculate_sha256(concat, 64, current_pcr)) {
                     free_resources();
                     return false;
                 }
             }
-            memcpy(reconstructed_pcrs[pcr_idx], current_pcr, 32);
+            std::memcpy(reconstructed_pcrs[pcr_idx], current_pcr, 32);
         }
 
         /* Compare logs with active system registers */
@@ -15611,7 +15498,7 @@ public:
             u8 actual_pcr[32] = { 0 };
             u32 actual_pcr_size = 0;
             if (read_tpm_pcr(h_tbs_context, pcr_idx, 0x000B, actual_pcr, &actual_pcr_size)) {
-                if (actual_pcr_size != 32 || memcmp(actual_pcr, reconstructed_pcrs[pcr_idx], 32) != 0) {
+                if (actual_pcr_size != 32 || std::memcmp(actual_pcr, reconstructed_pcrs[pcr_idx], 32) != 0) {
                     if (pcr_idx != 0 && pcr_idx != 6) {
                         debug("TPM: Detected mismatch on hardware PCR ", pcr_idx);
                         passthrough_detected = true;
@@ -15702,13 +15589,16 @@ public:
         static bool add_score(const brand_enum p_brand, const brand_enum extra_brand, const u8 score) noexcept {
             last_detected_brand = p_brand;
             last_detected_score = score; /* Store for the engine to read */
-            VMAWARE_ASSUME(p_brand <= brand_enum::NULL_BRAND); /* If we maintain the invariant that the parameters are always valid brand_enum values */
+
+            constexpr size_t max_brands = sizeof(brand_scoreboard) / sizeof(brand_scoreboard[0]);
 
             const u8 p_idx = static_cast<u8>(p_brand);
-            brand_scoreboard[p_idx].score++;
-            
+            if (VMAWARE_LIKELY(p_idx < max_brands && p_brand != brand_enum::NULL_BRAND)) {
+                brand_scoreboard[p_idx].score++;
+            }
+
             const u8 e_idx = static_cast<u8>(extra_brand);
-            if (extra_brand != brand_enum::NULL_BRAND) {
+            if (extra_brand != brand_enum::NULL_BRAND && e_idx < max_brands) {
                 brand_scoreboard[e_idx].score++;
             }
 
@@ -16573,9 +16463,8 @@ public:
             case brand_enum::BAREVISOR: return "Hypervisor (Type 1)";
             case brand_enum::HYPERPLATFORM: return "Hypervisor (Type 1)";
             case brand_enum::MINIVISOR: return "Hypervisor (Type 1)";
-            case brand_enum::HYPERV_ROOT: return "Host machine"; /* this refers to the type 1 hypervisor where Windows normally runs under, we put "Host machine" to clarify you're not running under a traditional VM if this is detected */
+            case brand_enum::HYPERV_ROOT: return "Host machine"; /* This refers to the type 1 hypervisor where Windows normally runs under, we put "Host machine" to clarify you're not running under a traditional VM if this is detected */
             case brand_enum::NULL_BRAND: return "Unknown";
-            case brand_enum::INVALID: return "Invalid";
         }
 
         return "Invalid";
@@ -16695,19 +16584,11 @@ public:
         return "Running on bare metal";
     }
 
-
-    VMAWARE_DEPRECATED("is_hardened() is scheduled for removal in post-2.8.1. Use detect() instead.")
-    static bool is_hardened(const flagset& flags = core::generate_default()) noexcept {
-        VMAWARE_UNUSED(flags);
-        return false;
-    }
-
     struct vmaware {
         std::string brand;
         std::string type;
         std::string conclusion;
         bool is_vm = false;
-        bool is_hardened = false;
         u8 percentage = 0;
         u8 detected_count = 0;
         u16 technique_count = 0;
@@ -16731,7 +16612,6 @@ public:
             type = VM::type(flags);
             conclusion = VM::conclusion(flags);
             is_vm = VM::detect(flags);
-            is_hardened = false;
             percentage = VM::percentage(flags);
             detected_count = VM::detected_count(flags);
             technique_count = VM::technique_count;
