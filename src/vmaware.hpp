@@ -14588,7 +14588,7 @@ public:
 
         const DWORD exception_status = memory::execute_handler(vmload_stub);
         const bool fault_hit = (exception_status != 0);
-
+		std::cout << "[DEBUG] 666 SVM_EXCEPTIONS  run vmload_stub return exception_status="  << (int) exception_status<< ",#UD="<<(int) EXCEPTION_ILLEGAL_INSTRUCTION << "\n";
         if (exception_status == EXCEPTION_ILLEGAL_INSTRUCTION) {
             return false; /* AMD CPUs only #UD if SVM is not active */
         }
