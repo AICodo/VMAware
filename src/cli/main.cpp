@@ -46,7 +46,9 @@
     #include <windows.h>
     #include <shellapi.h>
     #ifdef VMAWARE_DEBUG
-        #define _CRTDBG_MAP_ALLOC
+        #ifndef _CRTDBG_MAP_ALLOC
+            #define _CRTDBG_MAP_ALLOC
+        #endif
         #include <crtdbg.h>
     #endif
 #endif
@@ -179,22 +181,91 @@ constexpr const char* date = "September 2026";
 }
 
 #if (CLI_WINDOWS && defined VMAWARE_DEBUG && !CLI_ARM)
-static void enable_crt_leak_check()
+static inline void enable_crt_leak_check() noexcept
 {
-    int flags = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
-    flags |= _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF;
+    std::cout << "[VMAware-Core] Running memory analysis... Performance may be decreased.\n";
+    i32 flags = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
+
+    flags |= _CRTDBG_ALLOC_MEM_DF;       /* Keep debug memory allocations active */
+    flags |= _CRTDBG_LEAK_CHECK_DF;      /* Perform automatic leak dump at exit */
+    flags |= _CRTDBG_CHECK_ALWAYS_DF;    /* Validate heap integrity on every allocation/free */
+    flags |= _CRTDBG_DELAY_FREE_MEM_DF;  /* Keep freed blocks in cache to catch use-after-free */
+
     _CrtSetDbgFlag(flags);
 
-    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
+    /* Redirect WARN, ERROR, and ASSERT to both stderr and the debugger output window. This prevents blocking modal GUI popups in headless environments */
+    const i32 report_modes = _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG;
+
+    _CrtSetReportMode(_CRT_WARN, report_modes);
     _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
+
+    _CrtSetReportMode(_CRT_ERROR, report_modes);
+    _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
+
+    _CrtSetReportMode(_CRT_ASSERT, report_modes);
+    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+
+    /* Support break-on-allocation via environment variable: VMAWARE_BREAK_ALLOC */
+    char* break_alloc_env = nullptr;
+    std::size_t break_alloc_len = 0;
+    if (_dupenv_s(&break_alloc_env, &break_alloc_len, "VMAWARE_BREAK_ALLOC") == 0 && break_alloc_env != nullptr) {
+        char* end_ptr = nullptr;
+        long alloc_request_number = std::strtol(break_alloc_env, &end_ptr, 10);
+        if (end_ptr != break_alloc_env && alloc_request_number > 0) {
+            _CrtSetBreakAlloc(alloc_request_number);
+        }
+        std::free(break_alloc_env);
+        break_alloc_env = nullptr;
+    }
 }
+
+/* Captures starting heap state */
+static inline void crt_checkpoint_start(_CrtMemState* state) noexcept
+{
+    if (state != nullptr) {
+        _CrtMemCheckpoint(state);
+    }
+}
+
+/* Compares state against start checkpoint and outputs leak diff */
+static inline i32 crt_checkpoint_verify(const _CrtMemState * start_state) noexcept
+{
+    if (start_state == nullptr) {
+        return 0;
+    }
+
+    _CrtMemState current_state;
+    _CrtMemState diff_state;
+
+    _CrtMemCheckpoint(&current_state);
+
+    /* If memory differences exist between start and finish, dump statistics */
+    if (_CrtMemDifference(&diff_state, start_state, &current_state) != 0) {
+        std::cerr << "\n[VMAware] Memory leaks detected during execution.\n";
+        _CrtMemDumpStatistics(&diff_state);
+        _CrtMemDumpAllObjectsSince(start_state);
+        return 1;
+    }
+
+    return 0;
+}
+
 #endif
 
 int main(int argc, char* argv[]) {
+    if (argv == nullptr || argc <= 0) {
+        return 1;
+    }
+
 #if (CLI_WINDOWS && !CLI_ARM)
     #ifdef VMAWARE_DEBUG
+    /*
         enable_crt_leak_check();
+        _CrtMemState start_memory_checkpoint;
+        crt_checkpoint_start(&start_memory_checkpoint);
+    */
     #endif
+
     bool rich_requested = false;
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "--rich") == 0) {
@@ -214,13 +285,13 @@ int main(int argc, char* argv[]) {
     if (rich_requested && !already_spawned) {
         SetEnvironmentVariableA("VMAWARE_SPAWNED", "1");
 
-        char exePath[MAX_PATH];
-        GetModuleFileNameA(NULL, exePath, MAX_PATH);
+        char exe_path[MAX_PATH];
+        GetModuleFileNameA(NULL, exe_path, MAX_PATH);
 
-        char currentDir[MAX_PATH];
-        GetCurrentDirectoryA(MAX_PATH, currentDir);
+        char current_directory[MAX_PATH];
+        GetCurrentDirectoryA(MAX_PATH, current_directory);
 
-        std::string args = "\"" + std::string(exePath) + "\"";
+        std::string args = "\"" + std::string(exe_path) + "\"";
         for (int i = 1; i < argc; ++i) {
             args += " \"";
             args += argv[i];
@@ -234,7 +305,7 @@ int main(int argc, char* argv[]) {
         sei.lpVerb = "open";
         sei.lpFile = "conhost.exe";
         sei.lpParameters = args.c_str();
-        sei.lpDirectory = currentDir;
+        sei.lpDirectory = current_directory;
         sei.nShow = SW_SHOWNORMAL;
 
         if (!IsDebuggerPresent() && ShellExecuteExA(&sei)) {
@@ -317,7 +388,7 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
-        auto it = std::find_if(table.cbegin(), table.cend(), [&](const std::pair<const char*, i32>& p) {
+        auto it = std::find_if(table.cbegin(), table.cend(), [&](const std::pair<const char*, i32>& p) noexcept {
             return (std::strcmp(p.first, arg_string) == 0);
         });
 
@@ -414,5 +485,15 @@ int main(int argc, char* argv[]) {
     }
 
     general(high_threshold, all, dynamic, general_output_arg);
+
+#if (defined(VMAWARE_WINDOWS) && !defined(VMAWARE_ARM) && defined(VMAWARE_DEBUG) && defined(VMAWARE_MSVC))
+    /*
+    i32 leak_status = crt_checkpoint_verify(&start_memory_checkpoint);
+    if (leak_status != 0) {
+        return 2;
+    }
+    */
+#endif
+
     return 0;
 }

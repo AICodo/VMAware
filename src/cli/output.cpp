@@ -50,23 +50,23 @@ static void console_pause() {
     std::getline(std::cin, dummy);
 }
 
-bool is_admin() {
+bool is_admin() noexcept {
     bool is_admin = false;
 #if (CLI_LINUX || CLI_APPLE)
     const uid_t uid = getuid();
     const uid_t euid = geteuid();
     is_admin = ((uid != euid) || (euid == 0));
 #elif (CLI_WINDOWS)
-    HANDLE hToken = nullptr;
-    if (OpenProcessToken(reinterpret_cast<HANDLE>(-1LL), TOKEN_QUERY, &hToken)) {
+    HANDLE token_handle = nullptr;
+    if (OpenProcessToken(reinterpret_cast<HANDLE>(-1LL), TOKEN_QUERY, &token_handle)) {
         TOKEN_ELEVATION elevation{};
         DWORD dwSize;
-        if (GetTokenInformation(hToken, TokenElevation, &elevation, sizeof(elevation), &dwSize)) {
+        if (GetTokenInformation(token_handle, TokenElevation, &elevation, sizeof(elevation), &dwSize)) {
             if (elevation.TokenIsElevated) {
                 is_admin = true;
             }
         }
-        CloseHandle(hToken);
+        CloseHandle(token_handle);
     }
 #endif
     return is_admin;
@@ -104,16 +104,22 @@ static bool is_disabled(const VM::enum_flags flag) {
     return false;
 }
 
-static bool is_unsupported(const VM::enum_flags flag) {
-    if ((flag >= VM::HYPERVISOR_BIT) && (flag <= VM::KGT_SIGNATURE)) {
-        return false;
-    }
+static constexpr bool is_unsupported(const VM::enum_flags flag) noexcept {
 #if (CLI_LINUX)
-    return (!((flag >= VM::LINUX_START) && (flag <= VM::LINUX_END)));
+    return !(
+        (flag >= VM::HYPERVISOR_BIT && flag <= VM::KGT_SIGNATURE) ||
+        (flag >= VM::LINUX_START && flag <= VM::LINUX_END)
+    );
 #elif (CLI_WINDOWS)
-    return (!((flag >= VM::WINDOWS_START) && (flag <= VM::WINDOWS_END)));
+    return !(
+        (flag >= VM::HYPERVISOR_BIT && flag <= VM::KGT_SIGNATURE) ||
+        (flag >= VM::WINDOWS_START && flag <= VM::WINDOWS_END)
+    );
 #elif (CLI_APPLE)
-    return (!((flag >= VM::MACOS_START) && (flag <= VM::MACOS_END)));
+    return !(
+        (flag >= VM::HYPERVISOR_BIT && flag <= VM::KGT_SIGNATURE) ||
+        (flag >= VM::MACOS_START && flag <= VM::MACOS_END)
+     );
 #else
     return false;
 #endif
@@ -130,7 +136,7 @@ static std::pair<bool, VM::enum_flags> string_to_technique(const std::string& na
     return { false, VM::NULL_ARG };
 }
 
-bool is_vm_brand_multiple(const std::string& vm_brand) {
+bool is_vm_brand_multiple(const std::string& vm_brand) noexcept {
     return (vm_brand.find(" or ") != std::string::npos);
 }
 
@@ -254,11 +260,9 @@ static void checker(const VM::enum_flags flag, const char* message) {
 
     supported_count++;
 
-    auto start_time = std::chrono::high_resolution_clock::now();
-
+    const auto start_time = std::chrono::high_resolution_clock::now();
     const bool result = VM::check(flag);
-
-    auto end_time = std::chrono::high_resolution_clock::now();
+    const auto end_time = std::chrono::high_resolution_clock::now();
 
     const double ms = std::chrono::duration<double, std::milli>(end_time - start_time).count();
 
@@ -392,19 +396,19 @@ void generate_json(const char* output) {
     file.close();
 }
 
-u32 get_technique_count() {
-    return static_cast<u32>(VM::technique_count);
+u32 get_technique_count() noexcept {
+     return static_cast<u32>(VM::technique_count);
 }
 
-int run_stdout(bool high_threshold, bool all, bool dynamic) {
-    return static_cast<int>(!VM::detect(
+i32 run_stdout(bool high_threshold, bool all, bool dynamic) noexcept {
+    return static_cast<i32>(!VM::detect(
         high_threshold ? VM::HIGH_THRESHOLD : VM::NULL_ARG,
         all ? VM::ALL : VM::NULL_ARG,
         dynamic ? VM::DYNAMIC : VM::NULL_ARG
     ));
 }
 
-u32 run_percent(bool high_threshold, bool all, bool dynamic) {
+u32 run_percent(bool high_threshold, bool all, bool dynamic) noexcept {
     return static_cast<u32>(VM::percentage(
         high_threshold ? VM::HIGH_THRESHOLD : VM::NULL_ARG,
         all ? VM::ALL : VM::NULL_ARG,
@@ -412,7 +416,7 @@ u32 run_percent(bool high_threshold, bool all, bool dynamic) {
     ));
 }
 
-bool run_detect(bool high_threshold, bool all, bool dynamic) {
+bool run_detect(bool high_threshold, bool all, bool dynamic) noexcept {
     return VM::detect(
         high_threshold ? VM::HIGH_THRESHOLD : VM::NULL_ARG,
         all ? VM::ALL : VM::NULL_ARG,
@@ -589,7 +593,6 @@ void general(bool high_threshold, bool all, bool dynamic, const char* output_fil
     checker(VM::MAC_SYS, "system profiler");
     checker(VM::KERNEL_OBJECTS, "kernel objects");
     checker(VM::NVRAM, "NVRAM");
-    checker(VM::CLOCK, "system timers");
     checker(VM::MSR, "model specific registers");
     checker(VM::CPU_HEURISTIC, "instruction capabilities");
     checker(VM::INTERRUPT_SHADOW, "interrupt shadows");
@@ -602,6 +605,8 @@ void general(bool high_threshold, bool all, bool dynamic, const char* output_fil
     checker(VM::MEASURED_BOOT, "measured boot logs");
     checker(VM::TPM, "TPM");
     checker(VM::HYPERVISOR_HOOK, "EPT/NPT hooking");
+    checker(VM::VCPU_SCHEDULING, "vCPU scheduling");
+    checker(VM::EMULATION, "instruction emulation");
     checker(VM::TIMER, "timing anomalies");
 
     const auto t2 = std::chrono::high_resolution_clock::now();
@@ -616,9 +621,7 @@ void general(bool high_threshold, bool all, bool dynamic, const char* output_fil
     #endif
 
     if (print_sha) {
-        std::cout << grey << "\nSHA-256: "
-            << white << compute_self_sha256()
-            << ansi_exit << "\n";
+        std::cout << grey << "\nSHA-256: " << white << compute_self_sha256() << ansi_exit << "\n";
     }
 #endif
 
