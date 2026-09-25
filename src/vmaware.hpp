@@ -8361,10 +8361,12 @@ public:
         if (contains_ci(output, "Hypervisor detected: KVM") ||
             contains_ci(output, "Booting paravirtualized kernel on KVM") ||
             (contains_ci(output, "hypervisor") && contains_ci(output, "KVM"))) {
+			vma_debug("Detected Hypervisor detected: KVM or kvm ....");
             return core::add(brand_enum::KVM);
         }
 
         if (contains_ci(output, "QEMU Virtual CPU") || contains_ci(output, "DMI: QEMU")) {
+			vma_debug("Detected QEMU Virtual CPU");
             return core::add(brand_enum::QEMU);
         }
 
@@ -8373,6 +8375,7 @@ public:
         }
 
         if (contains_ci(output, "Hypervisor detected") || contains_ci(output, "paravirtualized kernel")) {
+			vma_debug("Detected Hypervisor detected or paravirtualized kernel");
             return true;
         }
 
